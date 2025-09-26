@@ -12,9 +12,12 @@ build:
 clean:
 	rm -Rf _output/
 
+EXCLUDE_DIRS ?= test/
+TEST_PKGS := $$(go list ./... | grep -v $(EXCLUDE_DIRS))
+
 .PHONY: test
 test:
-	go test -v ./...
+	go test -v $(TEST_PKGS)
 
 .PHONY: deploy-kind-ovnk
 deploy-kind-ovnk:
@@ -23,3 +26,14 @@ deploy-kind-ovnk:
 .PHONY: undeploy-kind-ovnk
 undeploy-kind-ovnk:
 	./hack/undeploy-kind-ovnk.sh
+
+NVM_VERSION := 0.40.3
+NODE_VERSION := 22.20.0
+NPM_VERSION := 11.6.1
+
+.PHONY: run-e2e
+run-e2e:
+	./hack/run-e2e.sh $(NVM_VERSION) $(NODE_VERSION) $(NPM_VERSION)
+
+.PHONY: test-e2e
+test-e2e: build deploy-kind-ovnk run-e2e undeploy-kind-ovnk

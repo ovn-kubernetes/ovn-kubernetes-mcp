@@ -12,6 +12,7 @@ import (
 
 	mcp "github.com/modelcontextprotocol/go-sdk/mcp"
 	kubernetesmcp "github.com/ovn-kubernetes/ovn-kubernetes-mcp/pkg/kubernetes/mcp"
+	sosreportmcp "github.com/ovn-kubernetes/ovn-kubernetes-mcp/pkg/sosreport/mcp"
 )
 
 type MCPServerConfig struct {
@@ -36,6 +37,11 @@ func main() {
 		}
 		log.Println("Adding Kubernetes tools to OVN-K MCP server")
 		k8sMcpServer.AddTools(ovnkMcpServer)
+	}
+	if serverCfg.Mode == "offline" {
+		sosreportServer := sosreportmcp.NewMCPServer()
+		log.Println("Adding sosreport tools to OVN-K MCP server")
+		sosreportServer.AddTools(ovnkMcpServer)
 	}
 
 	// Create a context that can be cancelled to shutdown the server.

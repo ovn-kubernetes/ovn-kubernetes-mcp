@@ -1,0 +1,8 @@
+Bridge br-int
+    Port br-int
+        Interface br-int
+            type: internal
+    Port ovn-k8s-mp0
+        Interface ovn-k8s-mp0
+            type: internal
+ovs_version: "2.17.0"

@@ -12,6 +12,7 @@ import (
 
 	mcp "github.com/modelcontextprotocol/go-sdk/mcp"
 	kubernetesmcp "github.com/ovn-kubernetes/ovn-kubernetes-mcp/pkg/kubernetes/mcp"
+	ovsmcp "github.com/ovn-kubernetes/ovn-kubernetes-mcp/pkg/ovs/mcp"
 	sosreportmcp "github.com/ovn-kubernetes/ovn-kubernetes-mcp/pkg/sosreport/mcp"
 )
 
@@ -37,6 +38,9 @@ func main() {
 		}
 		log.Println("Adding Kubernetes tools to OVN-K MCP server")
 		k8sMcpServer.AddTools(ovnkMcpServer)
+		ovsServer := ovsmcp.NewMCPServer(k8sMcpServer)
+		log.Println("Adding OVS tools to OVN-K MCP server")
+		ovsServer.AddTools(ovnkMcpServer)
 	}
 	if serverCfg.Mode == "offline" {
 		sosreportServer := sosreportmcp.NewMCPServer()

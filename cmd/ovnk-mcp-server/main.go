@@ -11,6 +11,7 @@ import (
 	"syscall"
 
 	mcp "github.com/modelcontextprotocol/go-sdk/mcp"
+	externaltoolsmcp "github.com/ovn-kubernetes/ovn-kubernetes-mcp/pkg/external_tools/mcp"
 	kubernetesmcp "github.com/ovn-kubernetes/ovn-kubernetes-mcp/pkg/kubernetes/mcp"
 )
 
@@ -36,6 +37,12 @@ func main() {
 		}
 		log.Println("Adding Kubernetes tools to OVN-K MCP server")
 		k8sMcpServer.AddTools(ovnkMcpServer)
+		externalToolsServer, err := externaltoolsmcp.NewMCPServer(k8sMcpServer)
+		if err != nil {
+			log.Fatalf("Failed to create external tools MCP server: %v", err)
+		}
+		log.Println("Adding external tools to OVN-K MCP server")
+		externalToolsServer.AddTools(ovnkMcpServer)
 	}
 
 	// Create a context that can be cancelled to shutdown the server.

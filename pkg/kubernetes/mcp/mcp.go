@@ -64,3 +64,7 @@ func (s *MCPServer) AddTools(server *mcp.Server) {
 				`Get all services: {"version": "v1", "kind": "Service"}`,
 		}, s.ListResources)
 }
+
+func (s *MCPServer) GetClientSet() *client.OVNKMCPServerClientSet {
+	return s.clientSet
+}

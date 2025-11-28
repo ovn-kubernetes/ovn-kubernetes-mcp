@@ -11,7 +11,11 @@ import (
 	"syscall"
 
 	mcp "github.com/modelcontextprotocol/go-sdk/mcp"
+<<<<<<< HEAD
 	kernelmcp "github.com/ovn-kubernetes/ovn-kubernetes-mcp/pkg/kernel/mcp"
+=======
+	externaltoolsmcp "github.com/ovn-kubernetes/ovn-kubernetes-mcp/pkg/external_tools/mcp"
+>>>>>>> 655d563 (Add external tools MCP server)
 	kubernetesmcp "github.com/ovn-kubernetes/ovn-kubernetes-mcp/pkg/kubernetes/mcp"
 	ovsmcp "github.com/ovn-kubernetes/ovn-kubernetes-mcp/pkg/ovs/mcp"
 	sosreportmcp "github.com/ovn-kubernetes/ovn-kubernetes-mcp/pkg/sosreport/mcp"
@@ -46,6 +50,12 @@ func main() {
 		kernelMcpServer := kernelmcp.NewMCPServer(k8sMcpServer)
 		log.Println("Adding Kernel tools to OVN-K MCP server")
 		kernelMcpServer.AddTools(ovnkMcpServer)
+		externalToolsServer, err := externaltoolsmcp.NewMCPServer(k8sMcpServer)
+		if err != nil {
+			log.Fatalf("Failed to create external tools MCP server: %v", err)
+		}
+		log.Println("Adding external tools to OVN-K MCP server")
+		externalToolsServer.AddTools(ovnkMcpServer)
 	}
 	if serverCfg.Mode == "offline" {
 		sosreportServer := sosreportmcp.NewMCPServer()

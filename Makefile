@@ -45,7 +45,7 @@ NPM_VERSION := 11.6.1
 
 .PHONY: run-e2e
 run-e2e:
-	./hack/run-e2e.sh $(NVM_VERSION) $(NODE_VERSION) $(NPM_VERSION)
+	./hack/run-e2e.sh $(NVM_VERSION) $(NODE_VERSION) $(NPM_VERSION) "$(MCP_MODE)"
 
 .PHONY: test-e2e
 test-e2e: build deploy-kind-ovnk run-e2e undeploy-kind-ovnk

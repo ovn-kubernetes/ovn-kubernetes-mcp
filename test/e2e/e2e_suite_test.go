@@ -37,6 +37,7 @@ import (
 const (
 	mcpServerPathEnvVar = "MCP_SERVER_PATH"
 	kubeconfigEnvVar    = "KUBECONFIG"
+	mcpModeEnvVar       = "MCP_MODE"
 )
 
 var (
@@ -90,6 +91,14 @@ func TestE2e(t *testing.T) {
 var _ = BeforeSuite(func() {
 	mcpServerPath := os.Getenv(mcpServerPathEnvVar)
 	Expect(mcpServerPath).NotTo(BeEmpty())
+
+	mcpMode := os.Getenv(mcpModeEnvVar)
+	// Skip kubeconfig setup for offline mode tests
+	// Offline tests (sosreport, must-gather) don't need a running cluster
+	if mcpMode == "Offline Mode" {
+		return
+	}
+
 	kubeconfig := os.Getenv(kubeconfigEnvVar)
 	Expect(kubeconfig).NotTo(BeEmpty())
 

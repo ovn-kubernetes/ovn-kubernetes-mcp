@@ -1,0 +1,5 @@
+2025-10-29T10:00:00.123456789Z stdout F I1029 10:00:00.123456       1 ovnkube.go:123] Starting ovnkube-node
+2025-10-29T10:00:01.234567890Z stdout F I1029 10:00:01.234567       1 ovnkube.go:456] Initialized OVN connection
+2025-10-29T10:00:02.345678901Z stderr F E1029 10:00:02.345678       1 ovnkube.go:789] ERROR: Failed to connect to ovn-controller
+2025-10-29T10:00:03.456789012Z stdout F I1029 10:00:03.456789       1 ovnkube.go:890] Retrying connection
+2025-10-29T10:00:04.567890123Z stdout F I1029 10:00:04.567890       1 ovnkube.go:901] Successfully connected to ovn-controller

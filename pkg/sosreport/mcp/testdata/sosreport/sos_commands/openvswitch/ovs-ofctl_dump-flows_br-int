@@ -1,0 +1,2 @@
+cookie=0x0, duration=1234.567s, table=0, n_packets=100, n_bytes=10000, priority=100,in_port=1 actions=output:2
+cookie=0x0, duration=1234.567s, table=0, n_packets=200, n_bytes=20000, priority=100,in_port=2 actions=output:1

@@ -1,0 +1,41 @@
+{
+  "components": {
+    "report": {
+      "plugins": {
+        "openvswitch": {
+          "commands": [
+            {
+              "exec": "ovs-vsctl -t 5 show",
+              "filepath": "sos_commands/openvswitch/ovs-vsctl_-t_5_show",
+              "return_code": 0
+            },
+            {
+              "exec": "ovs-ofctl dump-flows br-int",
+              "filepath": "sos_commands/openvswitch/ovs-ofctl_dump-flows_br-int",
+              "return_code": 0
+            }
+          ]
+        },
+        "networking": {
+          "commands": [
+            {
+              "exec": "ip addr show",
+              "filepath": "sos_commands/networking/ip_addr_show",
+              "return_code": 0
+            }
+          ]
+        },
+        "container_log": {
+          "commands": [],
+          "files": [
+            {
+              "files_copied": [
+                "host/var/log/pods/openshift-ovn-kubernetes_ovnkube-node-abc/ovnkube-node/0.log"
+              ]
+            }
+          ]
+        }
+      }
+    }
+  }
+}

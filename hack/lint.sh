@@ -10,6 +10,9 @@ if [ "$#" -ne 1 ]; then
   fi
 fi
 
+# Create cache directory if it doesn't exist
+mkdir -p ${HOME}/.cache/golangci-lint
+
 $1 run --security-opt label=disable --rm \
   -v  "${HOME}"/.cache/golangci-lint:/cache -e GOLANGCI_LINT_CACHE=/cache \
   -v "$(pwd)":/app -w /app -e GO111MODULE=on docker.io/golangci/golangci-lint:"${VERSION}" \

@@ -13,6 +13,7 @@ import (
 	mcp "github.com/modelcontextprotocol/go-sdk/mcp"
 	kernelmcp "github.com/ovn-kubernetes/ovn-kubernetes-mcp/pkg/kernel/mcp"
 	kubernetesmcp "github.com/ovn-kubernetes/ovn-kubernetes-mcp/pkg/kubernetes/mcp"
+	mustgathermcp "github.com/ovn-kubernetes/ovn-kubernetes-mcp/pkg/must-gather/mcp"
 	ovsmcp "github.com/ovn-kubernetes/ovn-kubernetes-mcp/pkg/ovs/mcp"
 	sosreportmcp "github.com/ovn-kubernetes/ovn-kubernetes-mcp/pkg/sosreport/mcp"
 )
@@ -24,6 +25,39 @@ type MCPServerConfig struct {
 	Kubernetes kubernetesmcp.Config
 }
 
+// setupLiveCluster sets up the live cluster mode.
+func setupLiveCluster(serverCfg *MCPServerConfig, server *mcp.Server) {
+	k8sMcpServer, err := kubernetesmcp.NewMCPServer(serverCfg.Kubernetes)
+	if err != nil {
+		log.Fatalf("Failed to create OVN-K MCP server: %v", err)
+	}
+	log.Println("Adding Kubernetes tools to OVN-K MCP server")
+	k8sMcpServer.AddTools(server)
+
+	ovsServer := ovsmcp.NewMCPServer(k8sMcpServer)
+	log.Println("Adding OVS tools to OVN-K MCP server")
+	ovsServer.AddTools(server)
+
+	kernelMcpServer := kernelmcp.NewMCPServer(k8sMcpServer)
+	log.Println("Adding Kernel tools to OVN-K MCP server")
+	kernelMcpServer.AddTools(server)
+}
+
+// setupOffline sets up the offline mode.
+func setupOffline(server *mcp.Server) {
+	sosreportServer := sosreportmcp.NewMCPServer()
+	log.Println("Adding sosreport tools to OVN-K MCP server")
+	sosreportServer.AddTools(server)
+
+	mustGatherServer, err := mustgathermcp.NewMCPServer()
+	if err != nil {
+		log.Printf("Failed to create Must Gather MCP server, will not be able to use must gather tools: %v", err)
+		return
+	}
+	log.Println("Adding Must Gather tools to OVN-K MCP server")
+	mustGatherServer.AddTools(server)
+}
+
 func main() {
 	serverCfg := parseFlags()
 
@@ -32,25 +66,17 @@ func main() {
 		&mcp.ServerOptions{HasTools: true},
 	)
 
-	if serverCfg.Mode == "live-cluster" {
-		k8sMcpServer, err := kubernetesmcp.NewMCPServer(serverCfg.Kubernetes)
-		if err != nil {
-			log.Fatalf("Failed to create OVN-K MCP server: %v", err)
-		}
-		log.Println("Adding Kubernetes tools to OVN-K MCP server")
-		k8sMcpServer.AddTools(ovnkMcpServer)
-		ovsServer := ovsmcp.NewMCPServer(k8sMcpServer)
-		log.Println("Adding OVS tools to OVN-K MCP server")
-		ovsServer.AddTools(ovnkMcpServer)
-
-		kernelMcpServer := kernelmcp.NewMCPServer(k8sMcpServer)
-		log.Println("Adding Kernel tools to OVN-K MCP server")
-		kernelMcpServer.AddTools(ovnkMcpServer)
-	}
-	if serverCfg.Mode == "offline" {
-		sosreportServer := sosreportmcp.NewMCPServer()
-		log.Println("Adding sosreport tools to OVN-K MCP server")
-		sosreportServer.AddTools(ovnkMcpServer)
+	// Setup the MCP server based on the mode.
+	switch serverCfg.Mode {
+	case "live-cluster":
+		setupLiveCluster(serverCfg, ovnkMcpServer)
+	case "offline":
+		setupOffline(ovnkMcpServer)
+	case "both":
+		setupLiveCluster(serverCfg, ovnkMcpServer)
+		setupOffline(ovnkMcpServer)
+	default:
+		log.Fatalf("Invalid mode: %s. Valid modes are: live-cluster, offline, both", serverCfg.Mode)
 	}
 
 	// Create a context that can be cancelled to shutdown the server.
@@ -105,7 +131,7 @@ func main() {
 
 func parseFlags() *MCPServerConfig {
 	cfg := &MCPServerConfig{}
-	flag.StringVar(&cfg.Mode, "mode", "live-cluster", "Mode of debugging: live-cluster or offline")
+	flag.StringVar(&cfg.Mode, "mode", "live-cluster", "Mode of debugging: live-cluster or offline or both")
 	flag.StringVar(&cfg.Transport, "transport", "stdio", "Transport to use: stdio or http")
 	flag.StringVar(&cfg.Port, "port", "8080", "Port to use")
 	flag.StringVar(&cfg.Kubernetes.Kubeconfig, "kubeconfig", "", "Path to the kubeconfig file")

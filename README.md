@@ -12,6 +12,7 @@ make build
 The server supports 2 operating modes:
 - `live-cluster` (default): Connect to a live Kubernetes cluster for real-time debugging
 - `offline`: Offline troubleshooting without requiring cluster access
+- `both`: In this mode, tools from both `live-cluster` and `offline` modes will be available.
 
 The server currently supports 2 transport modes: `stdio` and `http`.
 
@@ -72,4 +73,32 @@ For `http` mode:
 
 ```shell
 ./PATH-TO-THE-LOCAL-GIT-REPO/_output/ovnk-mcp-server --transport http --mode offline
+```
+
+### Both Mode
+
+For using both live-cluster (needs kubeconfig) and offline tools, use `--mode both`:
+
+For `stdio` mode:
+
+```json
+{
+  "mcpServers": {
+    "ovn-kubernetes": {
+      "command": "/PATH-TO-THE-LOCAL-GIT-REPO/_output/ovnk-mcp-server",
+      "args": [
+        "--mode",
+        "both",
+        "--kubeconfig",
+        "/PATH-TO-THE-KUBECONFIG-FILE"
+      ]
+    }
+  }
+}
+```
+
+For `http` mode:
+
+```shell
+./PATH-TO-THE-LOCAL-GIT-REPO/_output/ovnk-mcp-server --transport http --mode both --kubeconfig /PATH-TO-THE-KUBECONFIG-FILE
 ```

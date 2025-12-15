@@ -12,9 +12,9 @@ import (
 	"k8s.io/utils/ptr"
 )
 
-func (c *OVNKMCPServerClientSet) DebugNode(ctx context.Context, name, image string, command []string) (string, string, error) {
+func (c *OVNKMCPServerClientSet) DebugNode(ctx context.Context, name, image string, command []string, hostPath, mountPath string) (string, string, error) {
 	namespace := metav1.NamespaceDefault
-	debugPodName, cleanupPod, err := c.createPod(ctx, name, namespace, image)
+	debugPodName, cleanupPod, err := c.createPod(ctx, name, namespace, image, hostPath, mountPath)
 	if err != nil {
 		return "", "", err
 	}
@@ -32,9 +32,17 @@ func (c *OVNKMCPServerClientSet) DebugNode(ctx context.Context, name, image stri
 	return stdout, stderr, nil
 }
 
-func (c *OVNKMCPServerClientSet) createPod(ctx context.Context, node, namespace, image string) (string, func(), error) {
+func (c *OVNKMCPServerClientSet) createPod(ctx context.Context, node, namespace, image, hostPath, mountPath string) (string, func(), error) {
 	hostPathType := corev1.HostPathDirectory
 	sleepCommand := []string{"sleep", "infinity"}
+
+	if hostPath == "" {
+		hostPath = "/"
+	}
+
+	if mountPath == "" {
+		mountPath = "/host"
+	}
 
 	// Create a host networked privileged debug pod.
 	debugPod := &corev1.Pod{
@@ -58,7 +66,7 @@ func (c *OVNKMCPServerClientSet) createPod(ctx context.Context, node, namespace,
 					Name: "host",
 					VolumeSource: corev1.VolumeSource{
 						HostPath: &corev1.HostPathVolumeSource{
-							Path: "/",
+							Path: hostPath,
 							Type: &hostPathType,
 						},
 					},
@@ -76,7 +84,7 @@ func (c *OVNKMCPServerClientSet) createPod(ctx context.Context, node, namespace,
 					VolumeMounts: []corev1.VolumeMount{
 						{
 							Name:      "host",
-							MountPath: "/host",
+							MountPath: mountPath,
 						},
 					},
 					Env: []corev1.EnvVar{

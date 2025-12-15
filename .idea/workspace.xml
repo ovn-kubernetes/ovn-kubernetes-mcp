@@ -4,7 +4,14 @@
     <option name="autoReloadType" value="ALL" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="634d6d60-9418-405f-b0d0-51807cc0e952" name="Changes" comment="" />
+    <list default="true" id="634d6d60-9418-405f-b0d0-51807cc0e952" name="Changes" comment="">
+      <change beforePath="$PROJECT_DIR$/pkg/external_tools/mcp/pwru.go" beforeDir="false" afterPath="$PROJECT_DIR$/pkg/external_tools/mcp/pwru.go" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pkg/external_tools/mcp/utils.go" beforeDir="false" afterPath="$PROJECT_DIR$/pkg/external_tools/mcp/utils.go" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pkg/external_tools/types/manifest.go" beforeDir="false" afterPath="$PROJECT_DIR$/pkg/external_tools/types/manifest.go" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pkg/kubernetes/client/nodes.go" beforeDir="false" afterPath="$PROJECT_DIR$/pkg/kubernetes/client/nodes.go" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pkg/kubernetes/mcp/nodes.go" beforeDir="false" afterPath="$PROJECT_DIR$/pkg/kubernetes/mcp/nodes.go" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pkg/kubernetes/types/nodes.go" beforeDir="false" afterPath="$PROJECT_DIR$/pkg/kubernetes/types/nodes.go" afterDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -16,8 +23,12 @@
   </component>
   <component name="GoLinterSelectedExecutable" path="/usr/bin/golangci-lint" />
   <component name="HighlightingSettingsPerFile">
-    <setting file="file://$PROJECT_DIR$/pkg/kubernetes/client/client.go" root0="SKIP_INSPECTION" />
-    <setting file="file://$PROJECT_DIR$/pkg/kubernetes/mcp/mcp.go" root0="SKIP_INSPECTION" />
+    <setting file="file://$PROJECT_DIR$/cmd/ovnk-mcp-server/main.go" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/pkg/kubernetes/client/client.go" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/pkg/kubernetes/client/nodes.go" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/pkg/kubernetes/mcp/mcp.go" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/pkg/kubernetes/mcp/nodes.go" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/pkg/kubernetes/types/nodes.go" root0="FORCE_HIGHLIGHTING" />
   </component>
   <component name="ProjectColorInfo">{
   &quot;customColor&quot;: &quot;&quot;,
@@ -39,7 +50,7 @@
     "RunOnceActivity.go.formatter.settings.were.checked": "true",
     "RunOnceActivity.go.migrated.go.modules.settings": "true",
     "RunOnceActivity.go.modules.go.list.on.any.changes.was.set": "true",
-    "git-widget-placeholder": "must-gather",
+    "git-widget-placeholder": "external__tools",
     "go.import.settings.migrated": "true",
     "go.sdk.automatically.set": "true",
     "last_opened_file_path": "/home/meinli",

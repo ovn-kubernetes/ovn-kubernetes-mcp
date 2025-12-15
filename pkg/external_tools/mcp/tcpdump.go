@@ -10,12 +10,14 @@ import (
 )
 
 const (
-	MaxTcpdumpDuration = 30
-	MaxPacketCount     = 1000
-	DefaultSnaplen     = 96
-	MaxSnaplen         = 262
+	MaxPacketCount = 1000
+	DefaultSnaplen = 96
+	MaxSnaplen     = 262
 )
 
+// Tcpdump executes the tcpdump packet capture tool on a node or inside a pod.
+// It supports BPF filtering, snapshot length control, and configurable packet counts.
+// Output can be in text format for immediate analysis or pcap format for offline analysis.
 func (s *MCPServer) Tcpdump(ctx context.Context, req *mcp.CallToolRequest, in types.TcpdumpParams) (*mcp.CallToolResult, types.CommandResult, error) {
 	if err := ValidateInterface(in.Interface); err != nil {
 		return nil, types.CommandResult{}, err
@@ -24,30 +26,11 @@ func (s *MCPServer) Tcpdump(ctx context.Context, req *mcp.CallToolRequest, in ty
 		return nil, types.CommandResult{}, err
 	}
 
-	if in.Interface == "any" {
-		if in.BPFFilter == "" {
-			if in.Duration == 0 && in.PacketCount == 0 {
-				return nil, types.CommandResult{}, fmt.Errorf("capturing on 'any' interface requires either a BPF filter or explicit duration/packet_count limits")
-			}
-			if in.Duration > 10 || in.PacketCount > 100 {
-				return nil, types.CommandResult{}, fmt.Errorf("capturing on 'any' interface without BPF filter requires duration <= 10s and packet_count <= 100")
-			}
-		}
+	packetCount := in.PacketCount
+	if packetCount == 0 {
+		packetCount = MaxPacketCount
 	}
-
-	if err := requireAtLeastNParams(2, map[string]bool{
-		"duration":     in.Duration > 0,
-		"packet_count": in.PacketCount > 0,
-		"bpf_filter":   in.BPFFilter != "",
-	}); err != nil {
-		return nil, types.CommandResult{}, fmt.Errorf("tcpdump %w", err)
-	}
-
-	if err := validateIntMax(in.Duration, MaxTcpdumpDuration, "duration", "seconds"); err != nil {
-		return nil, types.CommandResult{}, err
-	}
-
-	if err := validateIntMax(in.PacketCount, MaxPacketCount, "packet_count", ""); err != nil {
+	if err := validateIntMax(packetCount, MaxPacketCount, "packet_count", ""); err != nil {
 		return nil, types.CommandResult{}, err
 	}
 
@@ -59,11 +42,11 @@ func (s *MCPServer) Tcpdump(ctx context.Context, req *mcp.CallToolRequest, in ty
 		return nil, types.CommandResult{}, err
 	}
 
-	cmd := newCommand("tcpdump",
-		"-i", in.Interface,
-		"-n",
-		"-s", strconv.Itoa(snaplen)).
-		addIf(in.PacketCount > 0, "-c", strconv.Itoa(in.PacketCount))
+	cmd := newCommand("tcpdump", "-n",
+		"-s", strconv.Itoa(snaplen),
+		"-c", strconv.Itoa(packetCount))
+	cmd.addIfNotEmpty(in.Interface, "-i", in.Interface)
+	cmd.addIfNotEmpty(in.BPFFilter, in.BPFFilter)
 
 	outputFormat := stringWithDefault(in.OutputFormat, "text")
 	switch outputFormat {
@@ -74,7 +57,7 @@ func (s *MCPServer) Tcpdump(ctx context.Context, req *mcp.CallToolRequest, in ty
 	default:
 		return nil, types.CommandResult{}, fmt.Errorf("invalid output_format: %s (must be 'text' or 'pcap')", outputFormat)
 	}
-	cmd.addIfNotEmpty(in.BPFFilter, in.BPFFilter)
+
 	switch in.TargetType {
 	case "node":
 		_, result, err := s.runDebugNode(ctx, req, types.DebugNodeParams{NodeName: in.NodeName, NodeImage: in.NodeImage}, cmd.build())

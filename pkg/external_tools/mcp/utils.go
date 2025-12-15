@@ -3,17 +3,17 @@ package external_tools
 import (
 	"context"
 	"fmt"
-	k8stypes "github.com/ovn-kubernetes/ovn-kubernetes-mcp/pkg/kubernetes/types"
 	"regexp"
 	"strings"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"github.com/ovn-kubernetes/ovn-kubernetes-mcp/pkg/external_tools/types"
+	k8stypes "github.com/ovn-kubernetes/ovn-kubernetes-mcp/pkg/kubernetes/types"
 )
 
 var interfaceNamePattern = regexp.MustCompile(`^[a-zA-Z0-9][a-zA-Z0-9._-]*$`)
 
-// executeCommand runs a command on a node
+// runDebugNode runs a command on a node
 func (s *MCPServer) runDebugNode(ctx context.Context, req *mcp.CallToolRequest, target types.DebugNodeParams, command []string) (*mcp.CallToolResult, types.CommandResult, error) {
 	if target.NodeName == "" {
 		return nil, types.CommandResult{}, fmt.Errorf("node_name is required when target_type is 'node'")
@@ -21,14 +21,20 @@ func (s *MCPServer) runDebugNode(ctx context.Context, req *mcp.CallToolRequest, 
 	if target.NodeImage == "" {
 		return nil, types.CommandResult{}, fmt.Errorf("node_image is required when target_type is 'node'")
 	}
-	_, output, err := s.k8sMcpServer.DebugNode(ctx, req, k8stypes.DebugNodeParams{Name: target.NodeName, Image: target.NodeImage, Command: command})
+	_, output, err := s.k8sMcpServer.DebugNode(ctx, req, k8stypes.DebugNodeParams{
+		Name:      target.NodeName,
+		Image:     target.NodeImage,
+		Command:   command,
+		HostPath:  target.HostPath,
+		MountPath: target.MountPath,
+	})
 	if err != nil {
 		return nil, types.CommandResult{}, err
 	}
 	return nil, types.CommandResult{Output: output.Stdout}, nil
 }
 
-// executeCommand runs a command on a pod
+// runExecPod runs a command on a pod
 func (s *MCPServer) runExecPod(ctx context.Context, req *mcp.CallToolRequest, target types.ExecPodParams, command []string) (*mcp.CallToolResult, types.CommandResult, error) {
 	if target.PodName == "" {
 		return nil, types.CommandResult{}, fmt.Errorf("pod_name is required when target_type is 'pod'")
@@ -87,6 +93,7 @@ func (cb *commandBuilder) build() []string {
 	return cb.args
 }
 
+// ValidateInterface validates a network interface name for security and correctness.
 func ValidateInterface(iface string) error {
 	if iface == "" {
 		return nil
@@ -103,6 +110,7 @@ func ValidateInterface(iface string) error {
 	return nil
 }
 
+// ValidateBPFFilter validates a BPF (Berkeley Packet Filter) expression for security.
 func ValidateBPFFilter(filter string) error {
 	if filter == "" {
 		return nil
@@ -111,7 +119,7 @@ func ValidateBPFFilter(filter string) error {
 		return fmt.Errorf("BPF filter too long (max 1024 characters)")
 	}
 
-	dangerous := []string{";", "|", "&", "`", "$", "$("}
+	dangerous := []string{";", "|", "&", "`", "$", "$(", "\n", "\x00"}
 	for _, pattern := range dangerous {
 		if strings.Contains(filter, pattern) {
 			return fmt.Errorf("BPF filter contains potentially dangerous characters")
@@ -120,24 +128,11 @@ func ValidateBPFFilter(filter string) error {
 	return nil
 }
 
-// requireAtLeastNParams validates that at least N of the provided parameters are set
-func requireAtLeastNParams(required int, params map[string]bool) error {
-	count := 0
-	var paramNames []string
-	for name, isSet := range params {
-		paramNames = append(paramNames, name)
-		if isSet {
-			count++
-		}
-	}
-	if count < required {
-		return fmt.Errorf("requires at least %d of: %v for safety", required, paramNames)
-	}
-	return nil
-}
-
-// validateIntMax checks if a value exceeds the maximum and returns an error if it does
+// validateIntMax checks if a value exceeds the maximum or is negative and returns an error if it does
 func validateIntMax(value, max int, fieldName, unit string) error {
+	if value < 0 {
+		return fmt.Errorf("%s cannot be negative", fieldName)
+	}
 	if value > max {
 		if unit != "" {
 			return fmt.Errorf("%s cannot exceed %d %s", fieldName, max, unit)

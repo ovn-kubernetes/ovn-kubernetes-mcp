@@ -1,0 +1,58 @@
+switch 7a8b9c0d-1234-5678-9abc-def012345678 (ovn-worker)
+    port stor-ovn-worker
+        type: router
+        addresses: ["router"]
+        router-port: rtos-ovn-worker
+    port k8s-ovn-worker
+        addresses: ["00:00:00:4e:98:3b 10.244.1.2"]
+    port etor-GR_ovn-worker
+        type: router
+        addresses: ["router"]
+        router-port: rtoe-GR_ovn-worker
+    port default_nginx-deployment-5d7f8b9c7d-abc12
+        addresses: ["0a:58:0a:f4:01:05 10.244.1.5"]
+    port default_web-server-6c8d9e0f1a-xyz34
+        addresses: ["0a:58:0a:f4:01:06 10.244.1.6"]
+switch 1234abcd-5678-efgh-ijkl-mnopqrstuvwx (join)
+    port jtor-ovn_cluster_router
+        type: router
+        addresses: ["router"]
+        router-port: rtoj-ovn_cluster_router
+    port jtor-GR_ovn-worker
+        type: router
+        addresses: ["router"]
+        router-port: rtoj-GR_ovn-worker
+    port jtor-GR_ovn-control-plane
+        type: router
+        addresses: ["router"]
+        router-port: rtoj-GR_ovn-control-plane
+switch 5678efgh-ijkl-mnop-qrst-uvwxyz123456 (ext_ovn-worker)
+    port breth0_ovn-worker
+        type: localnet
+        addresses: ["unknown"]
+    port etor-GR_ovn-worker
+        type: router
+        addresses: ["router"]
+        router-port: rtoe-GR_ovn-worker
+router bee65224-bc1c-43fe-8afd-05f62ff150cc (GR_ovn-worker)
+    port rtoj-GR_ovn-worker
+        mac: "0a:58:64:40:00:03"
+        networks: ["100.64.0.3/16"]
+    port rtoe-GR_ovn-worker
+        mac: "02:42:ac:12:00:03"
+        networks: ["172.18.0.3/16"]
+    nat 7f8a9b0c-1234-5678-9abc-def012345001
+        external ip: "172.18.0.3"
+        logical ip: "10.244.1.0/24"
+        type: "snat"
+router 4c4a0a35-348c-41cc-8417-53a618e0c383 (ovn_cluster_router)
+    port rtos-ovn-worker
+        mac: "0a:58:0a:f4:01:01"
+        networks: ["10.244.1.1/24"]
+    port rtos-ovn-control-plane
+        mac: "0a:58:0a:f4:00:01"
+        networks: ["10.244.0.1/24"]
+    port rtoj-ovn_cluster_router
+        mac: "0a:58:64:40:00:01"
+        networks: ["100.64.0.1/16"]
+

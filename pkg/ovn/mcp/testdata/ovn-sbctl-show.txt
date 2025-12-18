@@ -1,0 +1,20 @@
+Chassis "ovn-worker"
+    hostname: ovn-worker
+    Encap geneve
+        ip: "172.18.0.3"
+        options: {csum="true"}
+    Port_Binding k8s-ovn-worker
+    Port_Binding stor-ovn-worker
+    Port_Binding default_nginx-deployment-5d7f8b9c7d-abc12
+    Port_Binding default_web-server-6c8d9e0f1a-xyz34
+    Port_Binding cr-rtos-ovn-worker
+Chassis "ovn-control-plane"
+    hostname: ovn-control-plane
+    Encap geneve
+        ip: "172.18.0.2"
+        options: {csum="true"}
+    Port_Binding k8s-ovn-control-plane
+    Port_Binding stor-ovn-control-plane
+    Port_Binding kube-system_coredns-5d78c9869d-abcde
+    Port_Binding cr-rtos-ovn-control-plane
+

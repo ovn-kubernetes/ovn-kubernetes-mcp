@@ -1,0 +1,10 @@
+from-lport  1001 (inport == @a16982411286042166782 && ip4) allow-related
+from-lport  1001 (inport == @a16982411286042166782 && ip6) allow-related
+to-lport    1001 (outport == @a16982411286042166782 && ip4.src == 10.244.0.0/16) allow-related
+to-lport    1001 (outport == @a16982411286042166782 && ip6.src == fd00:10:244::/48) allow-related
+to-lport    1001 (outport == @a16982411286042166782 && ip4.src == 100.64.0.0/16) allow-related
+from-lport  1000 (inport == "default_nginx-deployment-5d7f8b9c7d-abc12" && ip) allow-related
+to-lport    1000 (outport == "default_nginx-deployment-5d7f8b9c7d-abc12" && ip4.src == 10.244.0.0/16) allow-related
+from-lport   500 (inport == @pg_default_deny_egress) drop
+to-lport     500 (outport == @pg_default_deny_ingress) drop
+

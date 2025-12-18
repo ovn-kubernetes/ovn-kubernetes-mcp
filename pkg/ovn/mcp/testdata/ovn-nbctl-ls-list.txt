@@ -1,0 +1,6 @@
+7a8b9c0d-1234-5678-9abc-def012345678 (ovn-worker)
+1234abcd-5678-efgh-ijkl-mnopqrstuvwx (join)
+5678efgh-ijkl-mnop-qrst-uvwxyz123456 (ext_ovn-worker)
+abcd1234-5678-9abc-def0-123456789abc (ovn-control-plane)
+efgh5678-ijkl-mnop-qrst-uvwxyz987654 (ext_ovn-control-plane)
+

@@ -1,0 +1,6 @@
+TYPE             EXTERNAL_IP        EXTERNAL_PORT    LOGICAL_IP          EXTERNAL_MAC         LOGICAL_PORT
+snat             172.18.0.3                          10.244.1.0/24
+snat             172.18.0.2                          10.244.0.0/24
+dnat_and_snat    172.18.0.100                        10.244.1.5          0a:58:0a:f4:01:05    default_nginx-deployment-5d7f8b9c7d-abc12
+dnat_and_snat    172.18.0.101                        10.244.1.6                               default_web-server-6c8d9e0f1a-xyz34
+

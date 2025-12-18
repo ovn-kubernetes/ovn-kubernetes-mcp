@@ -13,6 +13,7 @@ import (
 	mcp "github.com/modelcontextprotocol/go-sdk/mcp"
 	kernelmcp "github.com/ovn-kubernetes/ovn-kubernetes-mcp/pkg/kernel/mcp"
 	kubernetesmcp "github.com/ovn-kubernetes/ovn-kubernetes-mcp/pkg/kubernetes/mcp"
+	ovnmcp "github.com/ovn-kubernetes/ovn-kubernetes-mcp/pkg/ovn/mcp"
 	ovsmcp "github.com/ovn-kubernetes/ovn-kubernetes-mcp/pkg/ovs/mcp"
 	sosreportmcp "github.com/ovn-kubernetes/ovn-kubernetes-mcp/pkg/sosreport/mcp"
 )
@@ -42,7 +43,9 @@ func main() {
 		ovsServer := ovsmcp.NewMCPServer(k8sMcpServer)
 		log.Println("Adding OVS tools to OVN-K MCP server")
 		ovsServer.AddTools(ovnkMcpServer)
-
+		ovnServer := ovnmcp.NewMCPServer(k8sMcpServer)
+		log.Println("Adding OVN tools to OVN-K MCP server")
+		ovnServer.AddTools(ovnkMcpServer)
 		kernelMcpServer := kernelmcp.NewMCPServer(k8sMcpServer)
 		log.Println("Adding Kernel tools to OVN-K MCP server")
 		kernelMcpServer.AddTools(ovnkMcpServer)

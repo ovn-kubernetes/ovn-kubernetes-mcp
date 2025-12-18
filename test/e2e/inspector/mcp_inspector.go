@@ -57,12 +57,23 @@ func (i *MCPInspector) Execute() ([]byte, error) {
 		return nil, fmt.Errorf("tool name is required")
 	}
 
-	cmd, args, err := i.getCmdArgs()
+	cmdName, args, err := i.getCmdArgs()
 	if err != nil {
 		return nil, err
 	}
 
-	return exec.Command(cmd, args...).CombinedOutput()
+	cmd := exec.Command(cmdName, args...)
+	// Capture stdout and stderr separately
+	// npx prints installation messages to stderr which would corrupt the JSON output
+	output, err := cmd.Output()
+	if err != nil {
+		// Include stderr in error message for debugging
+		if exitErr, ok := err.(*exec.ExitError); ok {
+			return nil, fmt.Errorf("command failed: %v, stderr: %s", err, string(exitErr.Stderr))
+		}
+		return nil, err
+	}
+	return output, nil
 }
 
 func (i *MCPInspector) getCmdArgs() (string, []string, error) {

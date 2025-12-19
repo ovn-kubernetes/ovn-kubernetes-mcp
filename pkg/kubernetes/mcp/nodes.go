@@ -9,7 +9,7 @@ import (
 
 // DebugNode debugs a node by name, image and command.
 func (s *MCPServer) DebugNode(ctx context.Context, req *mcp.CallToolRequest, in types.DebugNodeParams) (*mcp.CallToolResult, types.DebugNodeResult, error) {
-	stdout, stderr, err := s.clientSet.DebugNode(ctx, in.Name, in.Image, in.Command)
+	stdout, stderr, err := s.clientSet.DebugNode(ctx, in.Name, in.Image, in.Command, in.HostPath, in.MountPath)
 	if err != nil {
 		return nil, types.DebugNodeResult{}, err
 	}

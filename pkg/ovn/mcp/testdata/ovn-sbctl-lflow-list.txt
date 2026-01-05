@@ -1,0 +1,23 @@
+Datapath: "ovn-worker" (7a8b9c0d-1234-5678-9abc-def012345678)  Pipeline: ingress
+  table=0 (ls_in_check_port_sec), priority=110  , match=(((ip4 && icmp4.type == 3 && icmp4.code == 4) || (ip6 && icmp6.type == 2 && icmp6.code == 0)) && flags.tunnel_rx == 1), action=(drop;)
+  table=0 (ls_in_check_port_sec), priority=100  , match=(eth.src[40]), action=(drop;)
+  table=0 (ls_in_check_port_sec), priority=100  , match=(vlan.present), action=(drop;)
+  table=0 (ls_in_check_port_sec), priority=50   , match=(1), action=(reg0[15] = check_in_port_sec(); next;)
+  table=1 (ls_in_apply_port_sec), priority=50   , match=(reg0[15] == 1), action=(drop;)
+  table=1 (ls_in_apply_port_sec), priority=0    , match=(1), action=(next;)
+  table=2 (ls_in_lookup_fdb   ), priority=0    , match=(1), action=(next;)
+  table=3 (ls_in_put_fdb      ), priority=0    , match=(1), action=(next;)
+  table=4 (ls_in_pre_acl      ), priority=110  , match=(eth.dst == $svc_monitor_mac), action=(next;)
+  table=4 (ls_in_pre_acl      ), priority=110  , match=(eth.mcast), action=(next;)
+  table=4 (ls_in_pre_acl      ), priority=110  , match=(ip && inport == "k8s-ovn-worker"), action=(next;)
+  table=4 (ls_in_pre_acl      ), priority=110  , match=(nd || nd_rs || nd_ra || mldv1 || mldv2 || (udp && udp.src == 546 && udp.dst == 547)), action=(next;)
+  table=4 (ls_in_pre_acl      ), priority=100  , match=(ip), action=(reg0[0] = 1; next;)
+  table=4 (ls_in_pre_acl      ), priority=0    , match=(1), action=(next;)
+Datapath: "ovn-worker" (7a8b9c0d-1234-5678-9abc-def012345678)  Pipeline: egress
+  table=0 (ls_out_pre_acl     ), priority=110  , match=(eth.mcast), action=(next;)
+  table=0 (ls_out_pre_acl     ), priority=110  , match=(eth.src == $svc_monitor_mac), action=(next;)
+  table=0 (ls_out_pre_acl     ), priority=110  , match=(ip && outport == "k8s-ovn-worker"), action=(next;)
+  table=0 (ls_out_pre_acl     ), priority=110  , match=(nd || nd_rs || nd_ra || mldv1 || mldv2 || (udp && udp.src == 546 && udp.dst == 547)), action=(next;)
+  table=0 (ls_out_pre_acl     ), priority=100  , match=(ip), action=(reg0[0] = 1; next;)
+  table=0 (ls_out_pre_acl     ), priority=0    , match=(1), action=(next;)
+

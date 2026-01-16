@@ -14,16 +14,19 @@ import (
 	kernelmcp "github.com/ovn-kubernetes/ovn-kubernetes-mcp/pkg/kernel/mcp"
 	kubernetesmcp "github.com/ovn-kubernetes/ovn-kubernetes-mcp/pkg/kubernetes/mcp"
 	mustgathermcp "github.com/ovn-kubernetes/ovn-kubernetes-mcp/pkg/must-gather/mcp"
+	nettoolsmcp "github.com/ovn-kubernetes/ovn-kubernetes-mcp/pkg/nettools/mcp"
 	ovnmcp "github.com/ovn-kubernetes/ovn-kubernetes-mcp/pkg/ovn/mcp"
 	ovsmcp "github.com/ovn-kubernetes/ovn-kubernetes-mcp/pkg/ovs/mcp"
 	sosreportmcp "github.com/ovn-kubernetes/ovn-kubernetes-mcp/pkg/sosreport/mcp"
 )
 
 type MCPServerConfig struct {
-	Mode       string
-	Transport  string
-	Port       string
-	Kubernetes kubernetesmcp.Config
+	Mode         string
+	Transport    string
+	Port         string
+	PwruImage    string
+	TcpdumpImage string
+	Kubernetes   kubernetesmcp.Config
 }
 
 // setupLiveCluster sets up the live cluster mode.
@@ -46,6 +49,10 @@ func setupLiveCluster(serverCfg *MCPServerConfig, server *mcp.Server) {
 	kernelMcpServer := kernelmcp.NewMCPServer(k8sMcpServer)
 	log.Println("Adding Kernel tools to OVN-K MCP server")
 	kernelMcpServer.AddTools(server)
+
+	netToolsServer := nettoolsmcp.NewMCPServer(k8sMcpServer, serverCfg.PwruImage, serverCfg.TcpdumpImage)
+	log.Println("Adding network tools to OVN-K MCP server")
+	netToolsServer.AddTools(server)
 }
 
 // setupOffline sets up the offline mode.
@@ -140,6 +147,8 @@ func parseFlags() *MCPServerConfig {
 	flag.StringVar(&cfg.Transport, "transport", "stdio", "Transport to use: stdio or http")
 	flag.StringVar(&cfg.Port, "port", "8080", "Port to use")
 	flag.StringVar(&cfg.Kubernetes.Kubeconfig, "kubeconfig", "", "Path to the kubeconfig file")
+	flag.StringVar(&cfg.PwruImage, "pwru-image", "docker.io/cilium/pwru:v1.0.10", "Container image for pwru operations")
+	flag.StringVar(&cfg.TcpdumpImage, "tcpdump-image", "nicolaka/netshoot:v0.13", "Container image for tcpdump operations")
 	flag.Parse()
 	return cfg
 }

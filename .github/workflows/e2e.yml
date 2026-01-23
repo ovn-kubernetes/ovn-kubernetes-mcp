@@ -1,0 +1,87 @@
+name: E2E Tests
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: e2e-${{ github.head_ref || github.run_id }}
+  cancel-in-progress: true
+
+jobs:
+  e2e:
+    name: E2E Test Suite
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - name: Check out code into the Go module directory
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: false
+        id: go
+
+      - name: Install dependencies
+        run: |
+          set -x
+          # Check if jinjanator is already available
+          if ! command -v jinjanate &> /dev/null; then
+            echo "jinjanator not found, installing..."
+            sudo apt-get update
+            sudo apt-get install -y pipx
+            pipx install jinjanator
+            pipx ensurepath
+            echo "$HOME/.local/bin" >> $GITHUB_PATH
+          else
+            echo "jinjanator already installed"
+          fi
+
+      - name: Verify jinjanator installation
+        run: |
+          set -x
+          which jinjanate
+          jinjanate --version
+
+      - name: Build
+        run: make build
+
+      - name: Deploy KIND
+        run: make deploy-kind-ovnk
+
+      - name: Run E2E tests
+        run: make run-e2e
+
+      - name: Export kind logs
+        if: always()
+        run: |
+          set -x
+          # Only export logs if kind CLI exists and cluster is running
+          if command -v kind &> /dev/null && kind get clusters 2>/dev/null | grep -q '^ovn$'; then
+            mkdir -p /tmp/kind/logs
+            kind export logs --name ovn --verbosity 4 /tmp/kind/logs
+          else
+            echo "KIND cluster 'ovn' not found or kind CLI not available, skipping log export"
+          fi
+
+      - name: Upload kind logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: kind-logs-e2e-${{ github.run_id }}
+          path: /tmp/kind/logs
+          if-no-files-found: ignore
+
+      - name: Cleanup KIND cluster
+        if: always()
+        run: |
+          set -x
+          kind delete cluster --name ovn || true

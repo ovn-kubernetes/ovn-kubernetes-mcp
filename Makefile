@@ -48,7 +48,10 @@ run-e2e:
 	./hack/run-e2e.sh $(NVM_VERSION) $(NODE_VERSION) $(NPM_VERSION)
 
 .PHONY: test-e2e
-test-e2e: build deploy-kind-ovnk run-e2e undeploy-kind-ovnk
+test-e2e: build deploy-kind-ovnk
+	$(MAKE) run-e2e || EXIT_CODE=$$?; \
+	$(MAKE) undeploy-kind-ovnk; \
+	exit $${EXIT_CODE:-0}
 
 .PHONY: lint
 lint:

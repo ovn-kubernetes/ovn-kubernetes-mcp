@@ -24,7 +24,7 @@ func (c *OVNKMCPServerClientSet) isNamespaced(group, version, kind string) (bool
 }
 
 // GetResource gets a resource by group, version, kind, name and namespace.
-func (c *OVNKMCPServerClientSet) GetResource(group, version, kind, resourceName, namespace string) (*unstructured.Unstructured, error) {
+func (c *OVNKMCPServerClientSet) GetResource(ctx context.Context, group, version, kind, resourceName, namespace string) (*unstructured.Unstructured, error) {
 	// If the namespace is not set, set it to the default namespace
 	// if the resource is namespaced.
 	if namespace == "" {
@@ -46,13 +46,13 @@ func (c *OVNKMCPServerClientSet) GetResource(group, version, kind, resourceName,
 	if err != nil {
 		return nil, fmt.Errorf("failed to get REST mapping for resource %s: %w", gvk.String(), err)
 	}
-	return c.getResource(restMapping.Resource, resourceName, namespace)
+	return c.getResource(ctx, restMapping.Resource, resourceName, namespace)
 }
 
 // getResource gets a resource by group, version, kind, name and namespace.
-func (c *OVNKMCPServerClientSet) getResource(gvr schema.GroupVersionResource, resourceName, namespace string) (*unstructured.Unstructured, error) {
+func (c *OVNKMCPServerClientSet) getResource(ctx context.Context, gvr schema.GroupVersionResource, resourceName, namespace string) (*unstructured.Unstructured, error) {
 	resource, err := c.dynamicClient.Resource(gvr).Namespace(namespace).
-		Get(context.Background(), resourceName, metav1.GetOptions{})
+		Get(ctx, resourceName, metav1.GetOptions{})
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch resource %s with name %s and namespace %s: %w", gvr.String(), resourceName, namespace, err)
 	}
@@ -60,7 +60,7 @@ func (c *OVNKMCPServerClientSet) getResource(gvr schema.GroupVersionResource, re
 }
 
 // ListResources lists resources by group, version, kind and namespace.
-func (c *OVNKMCPServerClientSet) ListResources(group, version, kind, namespace, labelSelector string) (*unstructured.UnstructuredList, error) {
+func (c *OVNKMCPServerClientSet) ListResources(ctx context.Context, group, version, kind, namespace, labelSelector string) (*unstructured.UnstructuredList, error) {
 	gvk := schema.GroupVersionKind{
 		Group:   group,
 		Version: version,
@@ -70,12 +70,12 @@ func (c *OVNKMCPServerClientSet) ListResources(group, version, kind, namespace, 
 	if err != nil {
 		return nil, fmt.Errorf("failed to get REST mapping for resource %s: %w", gvk.String(), err)
 	}
-	return c.listResources(restMapping.Resource, namespace, labelSelector)
+	return c.listResources(ctx, restMapping.Resource, namespace, labelSelector)
 }
 
 // listResources lists resources by group, version, kind and namespace.
-func (c *OVNKMCPServerClientSet) listResources(gvr schema.GroupVersionResource, namespace, labelSelector string) (*unstructured.UnstructuredList, error) {
-	resources, err := c.dynamicClient.Resource(gvr).Namespace(namespace).List(context.Background(), metav1.ListOptions{
+func (c *OVNKMCPServerClientSet) listResources(ctx context.Context, gvr schema.GroupVersionResource, namespace, labelSelector string) (*unstructured.UnstructuredList, error) {
+	resources, err := c.dynamicClient.Resource(gvr).Namespace(namespace).List(ctx, metav1.ListOptions{
 		LabelSelector: labelSelector,
 	})
 	if err != nil {

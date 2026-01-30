@@ -18,7 +18,7 @@ type Config struct {
 // MCPServer provides MCP server functionality for kernel operations.
 type MCPServer struct {
 	k8sMcpServer *kubernetesmcp.MCPServer
-	cfg          Config
+	cfg Config
 }
 
 // NewMCPServer creates a new MCP server instance

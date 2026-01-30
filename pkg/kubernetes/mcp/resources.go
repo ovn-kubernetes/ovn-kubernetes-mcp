@@ -30,7 +30,7 @@ func (s *MCPServer) GetResource(ctx context.Context, req *mcp.CallToolRequest, i
 	}
 
 	// Get the resource by group, version, kind, name and namespace.
-	resource, err := s.clientSet.GetResource(in.Group, in.Version, in.Kind, in.Name, in.Namespace)
+	resource, err := s.clientSet.GetResource(ctx, in.Group, in.Version, in.Kind, in.Name, in.Namespace)
 	if err != nil {
 		return nil, types.GetResourceResult{}, err
 	}
@@ -82,7 +82,7 @@ func (s *MCPServer) ListResources(ctx context.Context, req *mcp.CallToolRequest,
 	}
 
 	// List the resources by group, version, kind and namespace.
-	resources, err := s.clientSet.ListResources(in.Group, in.Version, in.Kind, in.Namespace, in.LabelSelector)
+	resources, err := s.clientSet.ListResources(ctx, in.Group, in.Version, in.Kind, in.Namespace, in.LabelSelector)
 	if err != nil {
 		return nil, types.ListResourcesResult{}, err
 	}

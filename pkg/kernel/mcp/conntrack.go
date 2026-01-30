@@ -32,15 +32,13 @@ func (s *MCPServer) GetConntrack(ctx context.Context, req *mcp.CallToolRequest, 
 	var stdout string
 	if !conntrackCliAvailable {
 		stdout, err = s.getConntrackFromFile(ctx, req, in.Node)
-		if err != nil {
-			return nil, types.Result{}, fmt.Errorf("error while getting list of conntrack entries: %w", err)
-		}
 	} else {
 		stdout, err = s.getConntrackUsingCLI(ctx, req, in.Node, in.Command, in.FilterParameters)
-		if err != nil {
-			return nil, types.Result{}, fmt.Errorf("error while getting list of conntrack entries: %w", err)
-		}
 	}
+	if err != nil {
+		return nil, types.Result{}, fmt.Errorf("error while getting list of conntrack entries: %w", err)
+	}
+
 	stdout = limitOutputLines(stdout, in.MaxLines)
 	return nil, types.Result{Data: stdout}, nil
 }

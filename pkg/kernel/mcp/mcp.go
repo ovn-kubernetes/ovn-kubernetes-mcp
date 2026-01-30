@@ -3,21 +3,25 @@ package mcp
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	kubernetesmcp "github.com/ovn-kubernetes/ovn-kubernetes-mcp/pkg/kubernetes/mcp"
 	k8stypes "github.com/ovn-kubernetes/ovn-kubernetes-mcp/pkg/kubernetes/types"
+	"github.com/ovn-kubernetes/ovn-kubernetes-mcp/pkg/utils"
 )
 
 // MCPServer provides MCP server functionality for kernel operations.
 type MCPServer struct {
 	k8sMcpServer *kubernetesmcp.MCPServer
+	ToolTimeout  time.Duration
 }
 
 // NewMCPServer creates a new MCP server instance
-func NewMCPServer(k8sMcpServer *kubernetesmcp.MCPServer) *MCPServer {
+func NewMCPServer(k8sMcpServer *kubernetesmcp.MCPServer, timeout time.Duration) *MCPServer {
 	return &MCPServer{
 		k8sMcpServer: k8sMcpServer,
+		ToolTimeout:  timeout,
 	}
 }
 
@@ -162,6 +166,9 @@ func (s *MCPServer) executeCommand(ctx context.Context, req *mcp.CallToolRequest
 	debugParameter := k8stypes.DebugNodeParams{Name: node, Image: image, Command: chrootCommand}
 	_, result, err := s.k8sMcpServer.DebugNode(ctx, req, debugParameter)
 	if err != nil {
+		if s.ToolTimeout > 0 {
+			err = utils.WrapTimeoutError(err, fmt.Sprintf("debug pod creation/execution on node %s", node), s.ToolTimeout)
+		}
 		return "", fmt.Errorf("error while establishing tty connection to the node: %w", err)
 	}
 

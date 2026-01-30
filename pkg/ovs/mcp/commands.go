@@ -8,6 +8,7 @@ import (
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	k8stypes "github.com/ovn-kubernetes/ovn-kubernetes-mcp/pkg/kubernetes/types"
+	"github.com/ovn-kubernetes/ovn-kubernetes-mcp/pkg/utils"
 )
 
 const defaultMaxLines = 100
@@ -16,7 +17,9 @@ func (s *MCPServer) runCommand(ctx context.Context, req *mcp.CallToolRequest, na
 	commands []string) ([]string, error) {
 	_, result, err := s.k8sMcpServer.ExecPod(ctx, req, k8stypes.ExecPodParams{NamespacedNameParams: namespacedName, Command: commands})
 	if err != nil {
-		return nil, err
+		return nil, utils.WrapTimeoutError(err,
+			fmt.Sprintf("%s on pod %s/%s", commands[0], namespacedName.Namespace, namespacedName.Name),
+			s.ToolTimeout)
 	}
 	if result.Stderr != "" {
 		return nil, fmt.Errorf("error occurred while running command %v on pod %s/%s: %s", commands, namespacedName.Namespace,

@@ -2,6 +2,7 @@ package mcp
 
 import (
 	"fmt"
+	"time"
 
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
@@ -15,10 +16,11 @@ type Config struct {
 }
 
 type MCPServer struct {
-	clientSet *client.OVNKMCPServerClientSet
+	clientSet   *client.OVNKMCPServerClientSet
+	ToolTimeout time.Duration
 }
 
-func NewMCPServer(cfg Config) (*MCPServer, error) {
+func NewMCPServer(cfg Config, timeout time.Duration) (*MCPServer, error) {
 	var config *rest.Config
 	var err error
 	if cfg.Kubeconfig != "" {
@@ -39,7 +41,8 @@ func NewMCPServer(cfg Config) (*MCPServer, error) {
 	}
 
 	return &MCPServer{
-		clientSet: clientSet,
+		clientSet:   clientSet,
+		ToolTimeout: timeout,
 	}, nil
 }
 

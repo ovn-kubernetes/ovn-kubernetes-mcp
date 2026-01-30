@@ -8,6 +8,7 @@ import (
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	k8stypes "github.com/ovn-kubernetes/ovn-kubernetes-mcp/pkg/kubernetes/types"
+	"github.com/ovn-kubernetes/ovn-kubernetes-mcp/pkg/utils"
 )
 
 const (
@@ -58,7 +59,12 @@ func (s *MCPServer) UtilityExists(ctx context.Context, req *mcp.CallToolRequest,
 	debugParameter := k8stypes.DebugNodeParams{Name: node, Image: image, Command: cmd.build()}
 	_, result, err := s.k8sMcpServer.DebugNode(ctx, req, debugParameter)
 	if err != nil || filterWarnings(result.Stderr) != "" {
-		return false, fmt.Errorf("error while checking availability of the utility %s: %s : %w", utility, filterWarnings(result.Stderr), err)
+		baseErr := err
+		if baseErr == nil {
+			baseErr = fmt.Errorf("stderr: %s", filterWarnings(result.Stderr))
+		}
+		baseErr = utils.WrapTimeoutError(baseErr, fmt.Sprintf("checking utility %s on node %s", utility, node), s.ToolTimeout)
+		return false, fmt.Errorf("error while checking availability of the utility %s: %s : %w", utility, filterWarnings(result.Stderr), baseErr)
 	}
 	return true, nil
 }

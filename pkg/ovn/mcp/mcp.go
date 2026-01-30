@@ -4,21 +4,25 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	kubernetesmcp "github.com/ovn-kubernetes/ovn-kubernetes-mcp/pkg/kubernetes/mcp"
 	ovntypes "github.com/ovn-kubernetes/ovn-kubernetes-mcp/pkg/ovn/types"
+	"github.com/ovn-kubernetes/ovn-kubernetes-mcp/pkg/utils"
 )
 
 // MCPServer provides OVN layer analysis tools
 type MCPServer struct {
 	k8sMcpServer *kubernetesmcp.MCPServer
+	ToolTimeout  time.Duration
 }
 
 // NewMCPServer creates a new OVN MCP server
-func NewMCPServer(k8sMcpServer *kubernetesmcp.MCPServer) *MCPServer {
+func NewMCPServer(k8sMcpServer *kubernetesmcp.MCPServer, timeout time.Duration) *MCPServer {
 	return &MCPServer{
 		k8sMcpServer: k8sMcpServer,
+		ToolTimeout:  timeout,
 	}
 }
 
@@ -158,6 +162,9 @@ Example output:
 // Show displays a comprehensive overview of OVN configuration.
 func (s *MCPServer) Show(ctx context.Context, req *mcp.CallToolRequest,
 	in ovntypes.ShowParams) (*mcp.CallToolResult, ovntypes.ShowResult, error) {
+	ctx, cancel := utils.ApplyTimeout(ctx, s.ToolTimeout)
+	defer cancel()
+
 	result := ovntypes.ShowResult{
 		Database: in.Database,
 	}
@@ -190,6 +197,9 @@ func (s *MCPServer) Show(ctx context.Context, req *mcp.CallToolRequest,
 // Both modes support filtering columns with the Columns parameter.
 func (s *MCPServer) Get(ctx context.Context, req *mcp.CallToolRequest,
 	in ovntypes.GetParams) (*mcp.CallToolResult, ovntypes.GetResult, error) {
+	ctx, cancel := utils.ApplyTimeout(ctx, s.ToolTimeout)
+	defer cancel()
+
 	result := ovntypes.GetResult{
 		Database: in.Database,
 		Table:    in.Table,
@@ -254,6 +264,9 @@ func (s *MCPServer) Get(ctx context.Context, req *mcp.CallToolRequest,
 // ListLogicalFlows lists logical flows from the Southbound database.
 func (s *MCPServer) ListLogicalFlows(ctx context.Context, req *mcp.CallToolRequest,
 	in ovntypes.LogicalFlowListParams) (*mcp.CallToolResult, ovntypes.LogicalFlowListResult, error) {
+	ctx, cancel := utils.ApplyTimeout(ctx, s.ToolTimeout)
+	defer cancel()
+
 	result := ovntypes.LogicalFlowListResult{
 		Datapath: in.Datapath,
 		Flows:    []string{},
@@ -294,6 +307,9 @@ func (s *MCPServer) ListLogicalFlows(ctx context.Context, req *mcp.CallToolReque
 // Trace traces a packet through the OVN logical network.
 func (s *MCPServer) Trace(ctx context.Context, req *mcp.CallToolRequest,
 	in ovntypes.OVNTraceParams) (*mcp.CallToolResult, ovntypes.OVNTraceResult, error) {
+	ctx, cancel := utils.ApplyTimeout(ctx, s.ToolTimeout)
+	defer cancel()
+
 	result := ovntypes.OVNTraceResult{
 		Datapath:  in.Datapath,
 		Microflow: in.Microflow,

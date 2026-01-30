@@ -8,11 +8,15 @@ import (
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"github.com/ovn-kubernetes/ovn-kubernetes-mcp/pkg/kernel/types"
+	"github.com/ovn-kubernetes/ovn-kubernetes-mcp/pkg/utils"
 )
 
 // GetNFT MCP handler for nftables operations.
 // GetNFT retrieves nftables configuration from a Kubernetes node.
 func (s *MCPServer) GetNFT(ctx context.Context, req *mcp.CallToolRequest, in types.ListNFTParams) (*mcp.CallToolResult, types.Result, error) {
+	ctx, cancel := utils.ApplyTimeout(ctx, s.ToolTimeout)
+	defer cancel()
+
 	nftCliAvailable, err := s.UtilityExists(ctx, req, in.Node, in.Image, "nft")
 	if !nftCliAvailable {
 		return nil, types.Result{}, fmt.Errorf("error while getting nft data: mentioned image does not have nft utility: %w", err)

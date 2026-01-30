@@ -1,6 +1,8 @@
 package mcp
 
 import (
+	"time"
+
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	kubernetesmcp "github.com/ovn-kubernetes/ovn-kubernetes-mcp/pkg/kubernetes/mcp"
 )
@@ -10,14 +12,16 @@ type MCPServer struct {
 	k8sMcpServer *kubernetesmcp.MCPServer
 	pwruImage    string
 	tcpdumpImage string
+	ToolTimeout  time.Duration
 }
 
 // NewMCPServer creates a new MCP server instance
-func NewMCPServer(k8sMcpServer *kubernetesmcp.MCPServer, pwruImage, tcpdumpImage string) *MCPServer {
+func NewMCPServer(k8sMcpServer *kubernetesmcp.MCPServer, pwruImage, tcpdumpImage string, timeout time.Duration) *MCPServer {
 	return &MCPServer{
 		k8sMcpServer: k8sMcpServer,
 		pwruImage:    pwruImage,
 		tcpdumpImage: tcpdumpImage,
+		ToolTimeout:  timeout,
 	}
 }
 

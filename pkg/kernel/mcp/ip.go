@@ -8,12 +8,16 @@ import (
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"github.com/ovn-kubernetes/ovn-kubernetes-mcp/pkg/kernel/types"
+	"github.com/ovn-kubernetes/ovn-kubernetes-mcp/pkg/utils"
 )
 
 // GetIPCommandOutput MCP handler for ip utility operations.
 // GetIPCommandOutput executes 'ip' utility commands on a node.
 // Requires ip utility in the debug container image.
 func (s *MCPServer) GetIPCommandOutput(ctx context.Context, req *mcp.CallToolRequest, in types.ListIPParams) (*mcp.CallToolResult, types.Result, error) {
+	ctx, cancel := utils.ApplyTimeout(ctx, s.ToolTimeout)
+	defer cancel()
+
 	ipCliAvailable, err := s.UtilityExists(ctx, req, in.Node, in.Image, "ip")
 	if !ipCliAvailable {
 		return nil, types.Result{}, fmt.Errorf("error while getting ip data: mentioned image does not have ip utility: %w", err)

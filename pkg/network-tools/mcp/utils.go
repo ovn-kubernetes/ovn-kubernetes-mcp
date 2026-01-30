@@ -9,6 +9,7 @@ import (
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	k8stypes "github.com/ovn-kubernetes/ovn-kubernetes-mcp/pkg/kubernetes/types"
 	"github.com/ovn-kubernetes/ovn-kubernetes-mcp/pkg/network-tools/types"
+	"github.com/ovn-kubernetes/ovn-kubernetes-mcp/pkg/utils"
 )
 
 var interfaceNamePattern = regexp.MustCompile(`^[a-zA-Z0-9][a-zA-Z0-9._-]*$`)
@@ -23,6 +24,7 @@ func (s *MCPServer) runDebugNode(ctx context.Context, req *mcp.CallToolRequest, 
 	}
 	_, output, err := s.k8sMcpServer.DebugNode(ctx, req, target)
 	if err != nil {
+		err = utils.WrapTimeoutError(err, fmt.Sprintf("debug pod on node %s", target.Name), s.ToolTimeout)
 		return types.CommandResult{}, err
 	}
 	return types.CommandResult{Output: output.Stdout}, nil
@@ -38,7 +40,9 @@ func (s *MCPServer) runExecPod(ctx context.Context, req *mcp.CallToolRequest, ta
 	}
 	_, output, err := s.k8sMcpServer.ExecPod(ctx, req, target)
 	if err != nil {
-		return types.CommandResult{}, err
+		return types.CommandResult{}, utils.WrapTimeoutError(err,
+			fmt.Sprintf("exec on pod %s/%s", target.NamespacedNameParams.Namespace, target.NamespacedNameParams.Name),
+			s.ToolTimeout)
 	}
 	return types.CommandResult{Output: output.Stdout}, nil
 }

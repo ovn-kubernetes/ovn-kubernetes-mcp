@@ -90,5 +90,5 @@ const (
 type GetParams struct {
 	NamespacedNameParams
 	// OutputType is the output type of the resource. If set, it can be YAML, JSON or wide.
-	OutputType OutputType `json:"outputType,omitempty"`
+	OutputType OutputType `json:"output_type,omitempty"`
 }

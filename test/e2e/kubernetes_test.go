@@ -88,12 +88,12 @@ var _ = Describe("Kubernetes Tools", func() {
 			By("Getting the secret")
 			output, err := mcpInspector.
 				MethodCall(resourceGetToolName, map[string]string{
-					"group":      "",
-					"version":    "v1",
-					"kind":       "Secret",
-					"namespace":  fr.Namespace.Name,
-					"name":       secretName,
-					"outputType": string(types.JSONOutputType),
+					"group":       "",
+					"version":     "v1",
+					"kind":        "Secret",
+					"namespace":   fr.Namespace.Name,
+					"name":        secretName,
+					"output_type": string(types.JSONOutputType),
 				}).Execute()
 			Expect(err).NotTo(HaveOccurred())
 			Expect(output).NotTo(BeEmpty())

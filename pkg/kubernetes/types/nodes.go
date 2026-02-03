@@ -5,8 +5,8 @@ type DebugNodeParams struct {
 	Name      string   `json:"name"`
 	Image     string   `json:"image"`
 	Command   []string `json:"command"`
-	HostPath  string   `json:"hostPath,omitempty"`
-	MountPath string   `json:"mountPath,omitempty"`
+	HostPath  string   `json:"host_path,omitempty"`
+	MountPath string   `json:"mount_path,omitempty"`
 }
 
 // DebugNodeResult is a type that contains the stdout and stderr of the executed command.

@@ -1,10 +1,14 @@
 package types
 
+import "github.com/ovn-kubernetes/ovn-kubernetes-mcp/pkg/utils"
+
 // GetPodLogsParams is a type that contains the name, namespace and container of a pod.
 type GetPodLogsParams struct {
 	NamespacedNameParams
 	Container string `json:"container,omitempty"`
 	Previous  bool   `json:"previous,omitempty"`
+	utils.PatternParams
+	utils.HeadTailParams
 }
 
 // GetPodLogsResult is a type that contains the logs of a pod where each log line

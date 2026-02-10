@@ -14,7 +14,7 @@ import (
 	kernelmcp "github.com/ovn-kubernetes/ovn-kubernetes-mcp/pkg/kernel/mcp"
 	kubernetesmcp "github.com/ovn-kubernetes/ovn-kubernetes-mcp/pkg/kubernetes/mcp"
 	mustgathermcp "github.com/ovn-kubernetes/ovn-kubernetes-mcp/pkg/must-gather/mcp"
-	nettoolsmcp "github.com/ovn-kubernetes/ovn-kubernetes-mcp/pkg/nettools/mcp"
+	nettoolsmcp "github.com/ovn-kubernetes/ovn-kubernetes-mcp/pkg/network-tools/mcp"
 	ovnmcp "github.com/ovn-kubernetes/ovn-kubernetes-mcp/pkg/ovn/mcp"
 	ovsmcp "github.com/ovn-kubernetes/ovn-kubernetes-mcp/pkg/ovs/mcp"
 	sosreportmcp "github.com/ovn-kubernetes/ovn-kubernetes-mcp/pkg/sosreport/mcp"
@@ -84,11 +84,11 @@ func main() {
 		setupLiveCluster(serverCfg, ovnkMcpServer)
 	case "offline":
 		setupOffline(ovnkMcpServer)
-	case "both":
+	case "dual":
 		setupLiveCluster(serverCfg, ovnkMcpServer)
 		setupOffline(ovnkMcpServer)
 	default:
-		log.Fatalf("Invalid mode: %s. Valid modes are: live-cluster, offline, both", serverCfg.Mode)
+		log.Fatalf("Invalid mode: %s. Valid modes are: live-cluster, offline, dual", serverCfg.Mode)
 	}
 
 	// Create a context that can be cancelled to shutdown the server.
@@ -143,7 +143,7 @@ func main() {
 
 func parseFlags() *MCPServerConfig {
 	cfg := &MCPServerConfig{}
-	flag.StringVar(&cfg.Mode, "mode", "live-cluster", "Mode of debugging: live-cluster or offline or both")
+	flag.StringVar(&cfg.Mode, "mode", "live-cluster", "Mode of debugging: live-cluster or offline or dual")
 	flag.StringVar(&cfg.Transport, "transport", "stdio", "Transport to use: stdio or http")
 	flag.StringVar(&cfg.Port, "port", "8080", "Port to use")
 	flag.StringVar(&cfg.Kubernetes.Kubeconfig, "kubeconfig", "", "Path to the kubeconfig file")

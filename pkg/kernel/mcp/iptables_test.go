@@ -1,4 +1,4 @@
-package kernel
+package mcp
 
 import (
 	"testing"

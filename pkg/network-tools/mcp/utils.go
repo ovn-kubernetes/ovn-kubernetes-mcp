@@ -1,4 +1,4 @@
-package nettools
+package mcp
 
 import (
 	"context"
@@ -8,7 +8,7 @@ import (
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	k8stypes "github.com/ovn-kubernetes/ovn-kubernetes-mcp/pkg/kubernetes/types"
-	"github.com/ovn-kubernetes/ovn-kubernetes-mcp/pkg/nettools/types"
+	"github.com/ovn-kubernetes/ovn-kubernetes-mcp/pkg/network-tools/types"
 )
 
 var interfaceNamePattern = regexp.MustCompile(`^[a-zA-Z0-9][a-zA-Z0-9._-]*$`)

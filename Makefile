@@ -63,6 +63,10 @@ else
 	echo "linter can only be run within a container since it needs a specific golangci-lint version"; exit 1
 endif
 
+.PHONY: update-readme-tools
+update-readme-tools:
+	go run ./hack/gen-readme-tools.go
+
 .PHONY: lint-fix
 lint-fix:
 ifeq ($(CONTAINER_RUNNABLE), 0)

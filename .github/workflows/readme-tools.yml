@@ -1,0 +1,34 @@
+name: README tools check
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  readme-tools:
+    name: README tools section up to date
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: false
+
+      - name: Update README tools section
+        run: make update-readme-tools
+
+      - name: Check for changes
+        run: |
+          if ! git diff --exit-code README.md; then
+            echo "::error::README.md tools section is out of date. Run 'make update-readme-tools' and commit the changes."
+            exit 1
+          fi

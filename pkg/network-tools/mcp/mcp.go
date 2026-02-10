@@ -1,4 +1,4 @@
-package nettools
+package mcp
 
 import (
 	"github.com/modelcontextprotocol/go-sdk/mcp"

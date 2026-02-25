@@ -26,6 +26,7 @@ type MCPServerConfig struct {
 	Port         string
 	PwruImage    string
 	TcpdumpImage string
+	Kernel       kernelmcp.Config
 	Kubernetes   kubernetesmcp.Config
 }
 
@@ -46,7 +47,7 @@ func setupLiveCluster(serverCfg *MCPServerConfig, server *mcp.Server) {
 	log.Println("Adding OVS tools to OVN-K MCP server")
 	ovsServer.AddTools(server)
 
-	kernelMcpServer := kernelmcp.NewMCPServer(k8sMcpServer)
+	kernelMcpServer := kernelmcp.NewMCPServer(k8sMcpServer, serverCfg.Kernel)
 	log.Println("Adding Kernel tools to OVN-K MCP server")
 	kernelMcpServer.AddTools(server)
 
@@ -149,6 +150,7 @@ func parseFlags() *MCPServerConfig {
 	flag.StringVar(&cfg.Kubernetes.Kubeconfig, "kubeconfig", "", "Path to the kubeconfig file")
 	flag.StringVar(&cfg.PwruImage, "pwru-image", "docker.io/cilium/pwru:v1.0.10", "Container image for pwru operations")
 	flag.StringVar(&cfg.TcpdumpImage, "tcpdump-image", "nicolaka/netshoot:v0.13", "Container image for tcpdump operations")
+	flag.StringVar(&cfg.Kernel.Image, "kernel-image", "nicolaka/netshoot:v0.13", "Container image for kernel operations")
 	flag.Parse()
 	return cfg
 }

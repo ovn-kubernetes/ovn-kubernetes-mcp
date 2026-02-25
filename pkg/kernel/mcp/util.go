@@ -52,15 +52,19 @@ func (cb *commandBuilder) build() []string {
 	return cb.args
 }
 
-// UtilityExists checks if a utility/command exists in the container
-func (s *MCPServer) UtilityExists(ctx context.Context, req *mcp.CallToolRequest, node, image, utility string) (bool, error) {
+// utilityExists checks if a utility/command exists in the container
+func (s *MCPServer) utilityExists(ctx context.Context, req *mcp.CallToolRequest, node, utility string) error {
 	cmd := newCommand("chroot", "/host", utility, "-V")
-	debugParameter := k8stypes.DebugNodeParams{Name: node, Image: image, Command: cmd.build()}
+	debugParameter := k8stypes.DebugNodeParams{Name: node, Image: s.cfg.Image, Command: cmd.build()}
 	_, result, err := s.k8sMcpServer.DebugNode(ctx, req, debugParameter)
-	if err != nil || filterWarnings(result.Stderr) != "" {
-		return false, fmt.Errorf("error while checking availability of the utility %s: %s : %w", utility, filterWarnings(result.Stderr), err)
+	if err != nil {
+		return fmt.Errorf("error while checking availability of the utility %s: %w", utility, err)
 	}
-	return true, nil
+	stderr := strings.TrimSpace(filterWarnings(result.Stderr))
+	if stderr != "" {
+		return fmt.Errorf("utility %s is unavailable in configured image: %s", utility, stderr)
+	}
+	return nil
 }
 
 // filterWarnings filters out lines starting with "Warning" from the output

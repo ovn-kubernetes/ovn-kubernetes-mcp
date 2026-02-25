@@ -14,9 +14,9 @@ import (
 // GetIPCommandOutput executes 'ip' utility commands on a node.
 // Requires ip utility in the debug container image.
 func (s *MCPServer) GetIPCommandOutput(ctx context.Context, req *mcp.CallToolRequest, in types.ListIPParams) (*mcp.CallToolResult, types.Result, error) {
-	ipCliAvailable, err := s.UtilityExists(ctx, req, in.Node, in.Image, "ip")
-	if !ipCliAvailable {
-		return nil, types.Result{}, fmt.Errorf("error while getting ip data: mentioned image does not have ip utility: %w", err)
+	err := s.utilityExists(ctx, req, in.Node, "ip")
+	if err != nil {
+		return nil, types.Result{}, fmt.Errorf("error while getting ip data: failed to verify ip utility availability in configured image: %w", err)
 	}
 
 	if err := validateIPCommand(in.Command); err != nil {
@@ -38,7 +38,7 @@ func (s *MCPServer) GetIPCommandOutput(ctx context.Context, req *mcp.CallToolReq
 	cmd.add(strings.Fields(in.Command)...)
 	cmd.addIfNotEmpty(in.FilterParameters, strings.Fields(in.FilterParameters)...)
 
-	stdout, err := s.executeCommand(ctx, req, in.Node, in.Image, cmd.build())
+	stdout, err := s.executeCommand(ctx, req, in.Node, cmd.build())
 	if err != nil {
 		return nil, types.Result{}, fmt.Errorf("error while getting ip data: %w", err)
 	}

@@ -4,7 +4,6 @@ package types
 // These parameters are embedded in other specific parameter types.
 type CommonParams struct {
 	Node     string `json:"node"`                // Node is the name of the Kubernetes node where the command will be executed
-	Image    string `json:"image"`               // Image is the container image to use for running the command
 	MaxLines int    `json:"max_lines,omitempty"` // Limit the number of lines in output
 }
 

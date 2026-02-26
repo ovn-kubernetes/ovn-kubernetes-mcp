@@ -1,0 +1,86 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  creationTimestamp: '2024-01-15T09:00:00Z'
+  generateName: ovnkube-node-
+  generation: 1
+  labels:
+    app: ovnkube-node
+    component: network
+    type: infra
+    kubernetes.io/os: linux
+  name: ovnkube-node-w1
+  namespace: openshift-ovn-kubernetes
+  resourceVersion: '54325'
+  uid: ovnkube-node-w1-uid
+spec:
+  containers:
+  - image: quay.io/openshift/ovn-kubernetes:latest
+    imagePullPolicy: IfNotPresent
+    name: ovnkube-node
+    resources:
+      limits:
+        cpu: '2'
+        memory: 2Gi
+      requests:
+        cpu: 200m
+        memory: 256Mi
+  - image: quay.io/openshift/ovn-kubernetes:latest
+    imagePullPolicy: IfNotPresent
+    name: northd
+    resources:
+      requests:
+        cpu: 100m
+        memory: 128Mi
+  hostNetwork: true
+  nodeName: worker-1
+  restartPolicy: Always
+  serviceAccount: ovnkube-node
+  serviceAccountName: ovnkube-node
+  terminationGracePeriodSeconds: 30
+status:
+  conditions:
+  - lastProbeTime: null
+    lastTransitionTime: '2024-01-15T09:00:05Z'
+    status: 'True'
+    type: Initialized
+  - lastProbeTime: null
+    lastTransitionTime: '2024-01-15T09:00:10Z'
+    status: 'True'
+    type: Ready
+  - lastProbeTime: null
+    lastTransitionTime: '2024-01-15T09:00:10Z'
+    status: 'True'
+    type: ContainersReady
+  - lastProbeTime: null
+    lastTransitionTime: '2024-01-15T09:00:05Z'
+    status: 'True'
+    type: PodScheduled
+  containerStatuses:
+  - containerID: cri-o://ovnkube-node-w1-id
+    image: quay.io/openshift/ovn-kubernetes:latest
+    imageID: quay.io/openshift/ovn-kubernetes@sha256:test123
+    name: ovnkube-node
+    ready: true
+    restartCount: 0
+    started: true
+    state:
+      running:
+        startedAt: '2024-01-15T09:00:08Z'
+  - containerID: cri-o://northd-w1-id
+    image: quay.io/openshift/ovn-kubernetes:latest
+    imageID: quay.io/openshift/ovn-kubernetes@sha256:test123
+    name: northd
+    ready: true
+    restartCount: 0
+    started: true
+    state:
+      running:
+        startedAt: '2024-01-15T09:00:08Z'
+  hostIP: 192.168.1.101
+  phase: Running
+  podIP: 192.168.1.101
+  podIPs:
+  - ip: 192.168.1.101
+  qosClass: Burstable
+  startTime: '2024-01-15T09:00:05Z'

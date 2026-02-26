@@ -1,8 +1,6 @@
 package e2e
 
 import (
-	"path/filepath"
-	"runtime"
 	"strings"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -14,15 +12,7 @@ import (
 
 // getTestdataSosreportPath computes the path to the testdata sosreport directory
 func getTestdataSosreportPath() string {
-	_, thisFile, _, ok := runtime.Caller(0)
-	if !ok {
-		Expect(ok).To(BeTrue())
-	}
-	path, err := filepath.Abs(filepath.Join(filepath.Dir(thisFile), "../../pkg/sosreport/mcp/testdata/sosreport"))
-	if err != nil {
-		Expect(err).NotTo(HaveOccurred())
-	}
-	return path
+	return utils.GetTestdataPath("../../pkg/sosreport/mcp/testdata/sosreport")
 }
 
 var _ = Describe("[offline] Sosreport Tools", func() {

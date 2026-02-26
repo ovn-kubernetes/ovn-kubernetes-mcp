@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  creationTimestamp: "2024-01-15T09:00:00Z"
+  labels:
+    kubernetes.io/metadata.name: openshift-ovn-kubernetes
+  name: openshift-ovn-kubernetes
+  resourceVersion: "100"

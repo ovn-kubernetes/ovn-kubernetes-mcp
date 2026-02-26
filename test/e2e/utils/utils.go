@@ -2,6 +2,9 @@ package utils
 
 import (
 	"encoding/json"
+	"os"
+	"path/filepath"
+	"runtime"
 
 	. "github.com/onsi/gomega"
 
@@ -22,4 +25,16 @@ func UnmarshalCallToolResult[T any](output []byte) T {
 	Expect(err).NotTo(HaveOccurred())
 
 	return resultInTFormat
+}
+
+func GetTestdataPath(relativePath string) string {
+	_, thisFile, _, ok := runtime.Caller(1)
+	Expect(ok).To(BeTrue())
+
+	path, err := filepath.Abs(filepath.Join(filepath.Dir(thisFile), relativePath))
+	Expect(err).NotTo(HaveOccurred())
+
+	_, err = os.Stat(path)
+	Expect(err).NotTo(HaveOccurred())
+	return path
 }

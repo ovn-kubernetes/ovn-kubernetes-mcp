@@ -1,0 +1,18 @@
+[must-gather      ] OUT 2024-01-15T10:30:00.000000000Z Using must-gather plug-in image: quay.io/openshift-release-dev/ocp-v4.0-art-dev@sha256:abcd1234
+When opening a support case, bugzilla, or issue please include the following summary data along with any other requested information:
+ClusterID: test-cluster-12345
+ClientVersion: v4.14.0
+ClusterVersion: Stable at "4.14.0"
+ClusterOperators:
+	clusteroperator/network is available
+
+[must-gather      ] OUT 2024-01-15T10:30:01.000000000Z namespace/openshift-must-gather-test created
+[must-gather      ] OUT 2024-01-15T10:30:02.000000000Z clusterrolebinding.rbac.authorization.k8s.io/must-gather-test created
+[must-gather      ] OUT 2024-01-15T10:30:03.000000000Z pod for plug-in image created
+[must-gather-test ] POD 2024-01-15T10:30:05.000000000Z [disk usage checker] Started
+[must-gather-test ] POD 2024-01-15T10:30:06.000000000Z Gathering data for ns/openshift-ovn-kubernetes...
+[must-gather-test ] POD 2024-01-15T10:30:10.000000000Z INFO: Collecting network logs
+[must-gather-test ] POD 2024-01-15T10:30:15.000000000Z INFO: Collecting OVN databases
+[must-gather-test ] POD 2024-01-15T10:30:20.000000000Z INFO: Collecting pod logs
+[must-gather-test ] POD 2024-01-15T10:30:25.000000000Z Wrote inspect data to must-gather.
+[must-gather-test ] POD 2024-01-15T10:30:30.000000000Z Must-gather collection completed successfully

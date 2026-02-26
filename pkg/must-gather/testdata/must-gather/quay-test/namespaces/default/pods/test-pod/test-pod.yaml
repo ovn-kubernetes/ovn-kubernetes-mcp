@@ -1,0 +1,80 @@
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  creationTimestamp: "2024-01-15T10:00:00Z"
+  generateName: test-pod-
+  generation: 1
+  labels:
+    app: test
+    component: test-component
+  name: test-pod
+  namespace: default
+  resourceVersion: "12345"
+  uid: test-pod-uid-12345
+spec:
+  containers:
+  - image: test-image:latest
+    imagePullPolicy: IfNotPresent
+    name: test-container
+    resources:
+      limits:
+        cpu: "1"
+        memory: 1Gi
+      requests:
+        cpu: 100m
+        memory: 128Mi
+    volumeMounts:
+    - mountPath: /var/run/secrets/kubernetes.io/serviceaccount
+      name: kube-api-access-test
+      readOnly: true
+  nodeName: worker-0
+  restartPolicy: Always
+  serviceAccount: default
+  serviceAccountName: default
+  terminationGracePeriodSeconds: 30
+  volumes:
+  - name: kube-api-access-test
+    projected:
+      defaultMode: 420
+      sources:
+      - serviceAccountToken:
+          expirationSeconds: 3607
+          path: token
+status:
+  conditions:
+  - lastProbeTime: null
+    lastTransitionTime: "2024-01-15T10:00:05Z"
+    status: "True"
+    type: Initialized
+  - lastProbeTime: null
+    lastTransitionTime: "2024-01-15T10:00:10Z"
+    status: "True"
+    type: Ready
+  - lastProbeTime: null
+    lastTransitionTime: "2024-01-15T10:00:10Z"
+    status: "True"
+    type: ContainersReady
+  - lastProbeTime: null
+    lastTransitionTime: "2024-01-15T10:00:05Z"
+    status: "True"
+    type: PodScheduled
+  containerStatuses:
+  - containerID: cri-o://test-container-id-12345
+    image: test-image:latest
+    imageID: test-image@sha256:abcd1234
+    lastState: {}
+    name: test-container
+    ready: true
+    restartCount: 0
+    started: true
+    state:
+      running:
+        startedAt: "2024-01-15T10:00:08Z"
+  hostIP: 192.168.1.100
+  phase: Running
+  podIP: 10.128.0.10
+  podIPs:
+  - ip: 10.128.0.10
+  qosClass: Burstable
+  startTime: "2024-01-15T10:00:05Z"

@@ -7,6 +7,7 @@ import (
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	k8stypes "github.com/ovn-kubernetes/ovn-kubernetes-mcp/pkg/kubernetes/types"
 	"github.com/ovn-kubernetes/ovn-kubernetes-mcp/pkg/network-tools/types"
+	"github.com/ovn-kubernetes/ovn-kubernetes-mcp/pkg/utils"
 )
 
 const (
@@ -18,6 +19,9 @@ const (
 // It creates a specialized debug pod with eBPF capabilities and traces packet processing paths.
 // This is useful for debugging packet drops, routing issues, and understanding kernel networking behavior.
 func (s *MCPServer) Pwru(ctx context.Context, req *mcp.CallToolRequest, in types.PwruParams) (*mcp.CallToolResult, types.CommandResult, error) {
+	ctx, cancel := utils.ApplyTimeout(ctx, s.ToolTimeout)
+	defer cancel()
+
 	outputLimitLines := in.OutputLimitLines
 	if outputLimitLines == 0 {
 		outputLimitLines = DefaultOutputLimitLines

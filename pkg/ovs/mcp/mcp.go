@@ -4,22 +4,26 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	kubernetesmcp "github.com/ovn-kubernetes/ovn-kubernetes-mcp/pkg/kubernetes/mcp"
 	k8stypes "github.com/ovn-kubernetes/ovn-kubernetes-mcp/pkg/kubernetes/types"
 	ovstypes "github.com/ovn-kubernetes/ovn-kubernetes-mcp/pkg/ovs/types"
+	"github.com/ovn-kubernetes/ovn-kubernetes-mcp/pkg/utils"
 )
 
 // MCPServer provides OVS layer analysis tools
 type MCPServer struct {
 	k8sMcpServer *kubernetesmcp.MCPServer
+	ToolTimeout  time.Duration
 }
 
 // NewMCPServer creates a new OVS MCP server
-func NewMCPServer(k8sMcpServer *kubernetesmcp.MCPServer) *MCPServer {
+func NewMCPServer(k8sMcpServer *kubernetesmcp.MCPServer, timeout time.Duration) *MCPServer {
 	return &MCPServer{
 		k8sMcpServer: k8sMcpServer,
+		ToolTimeout:  timeout,
 	}
 }
 
@@ -201,6 +205,9 @@ Example output:
 
 func (s *MCPServer) ListBridges(ctx context.Context, req *mcp.CallToolRequest,
 	in k8stypes.NamespacedNameParams) (*mcp.CallToolResult, ovstypes.BridgeResult, error) {
+	ctx, cancel := utils.ApplyTimeout(ctx, s.ToolTimeout)
+	defer cancel()
+
 	result := ovstypes.BridgeResult{
 		Bridges: []string{}, // Initialize with empty slice to ensure valid JSON even on error
 	}
@@ -218,6 +225,9 @@ func (s *MCPServer) ListBridges(ctx context.Context, req *mcp.CallToolRequest,
 // Show displays a comprehensive overview of OVS configuration.
 func (s *MCPServer) Show(ctx context.Context, req *mcp.CallToolRequest,
 	in ovstypes.ShowParams) (*mcp.CallToolResult, ovstypes.ShowResult, error) {
+	ctx, cancel := utils.ApplyTimeout(ctx, s.ToolTimeout)
+	defer cancel()
+
 	result := ovstypes.ShowResult{}
 
 	// Run ovs-vsctl show command
@@ -237,6 +247,9 @@ func (s *MCPServer) Show(ctx context.Context, req *mcp.CallToolRequest,
 
 func (s *MCPServer) ListPorts(ctx context.Context, req *mcp.CallToolRequest,
 	in ovstypes.GetOVSCommandParams) (*mcp.CallToolResult, ovstypes.PortResult, error) {
+	ctx, cancel := utils.ApplyTimeout(ctx, s.ToolTimeout)
+	defer cancel()
+
 	result := ovstypes.PortResult{
 		Ports: []string{}, // Initialize with empty slice to ensure valid JSON even on error
 	}
@@ -258,6 +271,9 @@ func (s *MCPServer) ListPorts(ctx context.Context, req *mcp.CallToolRequest,
 
 func (s *MCPServer) ListInterfaces(ctx context.Context, req *mcp.CallToolRequest,
 	in ovstypes.GetOVSCommandParams) (*mcp.CallToolResult, ovstypes.InterfaceResult, error) {
+	ctx, cancel := utils.ApplyTimeout(ctx, s.ToolTimeout)
+	defer cancel()
+
 	result := ovstypes.InterfaceResult{
 		Interfaces: []string{}, // Initialize with empty slice to ensure valid JSON even on error
 	}
@@ -280,6 +296,9 @@ func (s *MCPServer) ListInterfaces(ctx context.Context, req *mcp.CallToolRequest
 // DumpFlows dumps flows from a specific OVS bridge.
 func (s *MCPServer) DumpFlows(ctx context.Context, req *mcp.CallToolRequest,
 	in ovstypes.GetOVSCommandParams) (*mcp.CallToolResult, ovstypes.FlowsResult, error) {
+	ctx, cancel := utils.ApplyTimeout(ctx, s.ToolTimeout)
+	defer cancel()
+
 	result := ovstypes.FlowsResult{
 		Bridge: in.Bridge,
 		Flows:  []string{}, // Initialize with empty slice to ensure valid JSON even on error
@@ -313,6 +332,9 @@ func (s *MCPServer) DumpFlows(ctx context.Context, req *mcp.CallToolRequest,
 // DumpConntrack dumps connection tracking entries from OVS datapath.
 func (s *MCPServer) DumpConntrack(ctx context.Context, req *mcp.CallToolRequest,
 	in ovstypes.DumpConntrackParams) (*mcp.CallToolResult, ovstypes.ConntrackResult, error) {
+	ctx, cancel := utils.ApplyTimeout(ctx, s.ToolTimeout)
+	defer cancel()
+
 	result := ovstypes.ConntrackResult{
 		Entries: []string{}, // Initialize with empty slice to ensure valid JSON even on error
 	}
@@ -353,6 +375,9 @@ func (s *MCPServer) DumpConntrack(ctx context.Context, req *mcp.CallToolRequest,
 // DumpOfprotoTrace traces a packet through the OpenFlow pipeline.
 func (s *MCPServer) DumpOfprotoTrace(ctx context.Context, req *mcp.CallToolRequest,
 	in ovstypes.OfprotoTraceParams) (*mcp.CallToolResult, ovstypes.OfprotoTraceResult, error) {
+	ctx, cancel := utils.ApplyTimeout(ctx, s.ToolTimeout)
+	defer cancel()
+
 	result := ovstypes.OfprotoTraceResult{
 		Bridge: in.Bridge,
 		Flow:   in.Flow,

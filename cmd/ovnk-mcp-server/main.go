@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	mcp "github.com/modelcontextprotocol/go-sdk/mcp"
 	kernelmcp "github.com/ovn-kubernetes/ovn-kubernetes-mcp/pkg/kernel/mcp"
@@ -27,30 +28,48 @@ type MCPServerConfig struct {
 	PwruImage    string
 	TcpdumpImage string
 	Kubernetes   kubernetesmcp.Config
+	ToolTimeout  time.Duration
 }
 
 // setupLiveCluster sets up the live cluster mode.
 func setupLiveCluster(serverCfg *MCPServerConfig, server *mcp.Server) {
-	k8sMcpServer, err := kubernetesmcp.NewMCPServer(serverCfg.Kubernetes)
+	k8sMcpServer, err := kubernetesmcp.NewMCPServer(
+		serverCfg.Kubernetes,
+		serverCfg.ToolTimeout,
+	)
 	if err != nil {
 		log.Fatalf("Failed to create OVN-K MCP server: %v", err)
 	}
 	log.Println("Adding Kubernetes tools to OVN-K MCP server")
 	k8sMcpServer.AddTools(server)
 
-	ovnServer := ovnmcp.NewMCPServer(k8sMcpServer)
+	ovnServer := ovnmcp.NewMCPServer(
+		k8sMcpServer,
+		serverCfg.ToolTimeout,
+	)
 	log.Println("Adding OVN tools to OVN-K MCP server")
 	ovnServer.AddTools(server)
 
-	ovsServer := ovsmcp.NewMCPServer(k8sMcpServer)
+	ovsServer := ovsmcp.NewMCPServer(
+		k8sMcpServer,
+		serverCfg.ToolTimeout,
+	)
 	log.Println("Adding OVS tools to OVN-K MCP server")
 	ovsServer.AddTools(server)
 
-	kernelMcpServer := kernelmcp.NewMCPServer(k8sMcpServer)
+	kernelMcpServer := kernelmcp.NewMCPServer(
+		k8sMcpServer,
+		serverCfg.ToolTimeout,
+	)
 	log.Println("Adding Kernel tools to OVN-K MCP server")
 	kernelMcpServer.AddTools(server)
 
-	netToolsServer := nettoolsmcp.NewMCPServer(k8sMcpServer, serverCfg.PwruImage, serverCfg.TcpdumpImage)
+	netToolsServer := nettoolsmcp.NewMCPServer(
+		k8sMcpServer,
+		serverCfg.PwruImage,
+		serverCfg.TcpdumpImage,
+		serverCfg.ToolTimeout,
+	)
 	log.Println("Adding network tools to OVN-K MCP server")
 	netToolsServer.AddTools(server)
 }
@@ -143,12 +162,29 @@ func main() {
 
 func parseFlags() *MCPServerConfig {
 	cfg := &MCPServerConfig{}
+	var timeoutSeconds int
+
 	flag.StringVar(&cfg.Mode, "mode", "live-cluster", "Mode of debugging: live-cluster or offline or dual")
 	flag.StringVar(&cfg.Transport, "transport", "stdio", "Transport to use: stdio or http")
 	flag.StringVar(&cfg.Port, "port", "8080", "Port to use")
 	flag.StringVar(&cfg.Kubernetes.Kubeconfig, "kubeconfig", "", "Path to the kubeconfig file")
 	flag.StringVar(&cfg.PwruImage, "pwru-image", "docker.io/cilium/pwru:v1.0.10", "Container image for pwru operations")
 	flag.StringVar(&cfg.TcpdumpImage, "tcpdump-image", "nicolaka/netshoot:v0.13", "Container image for tcpdump operations")
+	flag.IntVar(&timeoutSeconds, "default-timeout", 60, "Default timeout in seconds for tool operations (0 to disable)")
 	flag.Parse()
+
+	// Convert timeout to duration and apply limits
+	if timeoutSeconds < 0 {
+		timeoutSeconds = 60
+	}
+
+	cfg.ToolTimeout = time.Duration(timeoutSeconds) * time.Second
+
+	if cfg.ToolTimeout == 0 {
+		log.Println("Tool timeout enforcement disabled")
+	} else {
+		log.Printf("Default tool timeout: %v", cfg.ToolTimeout)
+	}
+
 	return cfg
 }

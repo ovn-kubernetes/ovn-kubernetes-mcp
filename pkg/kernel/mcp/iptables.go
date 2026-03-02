@@ -8,12 +8,16 @@ import (
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"github.com/ovn-kubernetes/ovn-kubernetes-mcp/pkg/kernel/types"
+	"github.com/ovn-kubernetes/ovn-kubernetes-mcp/pkg/utils"
 )
 
 // GetIptables MCP handler for iptables operations.
 // GetIptables retrieves iptables/ip6tables rules from a Kubernetes node.
 // Automatically detects IPv6 and uses ip6tables when needed.
 func (s *MCPServer) GetIptables(ctx context.Context, req *mcp.CallToolRequest, in types.ListIPTablesParams) (*mcp.CallToolResult, types.Result, error) {
+	ctx, cancel := utils.ApplyTimeout(ctx, s.ToolTimeout)
+	defer cancel()
+
 	iptablesCliAvailable, err := s.UtilityExists(ctx, req, in.Node, in.Image, "iptables")
 	if !iptablesCliAvailable {
 		return nil, types.Result{}, fmt.Errorf("error while getting list of iptables rules: mentioned image does not have iptables utility: %w", err)

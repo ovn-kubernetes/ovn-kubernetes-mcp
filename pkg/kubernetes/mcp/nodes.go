@@ -8,6 +8,7 @@ import (
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"github.com/ovn-kubernetes/ovn-kubernetes-mcp/pkg/kubernetes/types"
+	"github.com/ovn-kubernetes/ovn-kubernetes-mcp/pkg/utils"
 )
 
 // validatePath validates that a path is safe to use for mounting.
@@ -46,7 +47,15 @@ func validatePath(path, pathType string) error {
 }
 
 // DebugNode debugs a node by name, image and command.
+// Note: This is an internal helper. Timeout should already be applied by the calling tool,
+// but we apply it here as well for offline tools that don't support timeouts like Must Gather, SOS reports, etc.
 func (s *MCPServer) DebugNode(ctx context.Context, req *mcp.CallToolRequest, in types.DebugNodeParams) (*mcp.CallToolResult, types.DebugNodeResult, error) {
+	if _, hasDeadline := ctx.Deadline(); !hasDeadline {
+		var cancel context.CancelFunc
+		ctx, cancel = utils.ApplyTimeout(ctx, s.ToolTimeout)
+		defer cancel()
+	}
+
 	// Validate paths before creating the pod
 	if err := validatePath(in.HostPath, "hostPath"); err != nil {
 		return nil, types.DebugNodeResult{}, err

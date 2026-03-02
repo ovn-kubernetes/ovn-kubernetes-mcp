@@ -8,6 +8,7 @@ import (
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"github.com/ovn-kubernetes/ovn-kubernetes-mcp/pkg/kernel/types"
+	"github.com/ovn-kubernetes/ovn-kubernetes-mcp/pkg/utils"
 )
 
 const conntrackSystemFile = "/proc/net/nf_conntrack"
@@ -17,6 +18,9 @@ const conntrackSystemFile = "/proc/net/nf_conntrack"
 // TODO: Add support for conntrack event monitoring (-E flag).
 // TODO: Add support for -G (get specific entry) command.
 func (s *MCPServer) GetConntrack(ctx context.Context, req *mcp.CallToolRequest, in types.ListConntrackParams) (*mcp.CallToolResult, types.Result, error) {
+	ctx, cancel := utils.ApplyTimeout(ctx, s.ToolTimeout)
+	defer cancel()
+
 	// Falls back to /proc/net/nf_conntrack parsing when conntrack CLI unavailable.
 	conntrackCliAvailable, _ := s.UtilityExists(ctx, req, in.Node, in.Image, "conntrack")
 	if err := validateConntrackCommand(in.Command, conntrackCliAvailable); err != nil {
@@ -32,15 +36,13 @@ func (s *MCPServer) GetConntrack(ctx context.Context, req *mcp.CallToolRequest, 
 	var err error
 	if !conntrackCliAvailable {
 		stdout, err = s.getConntrackFromFile(ctx, req, in.Node, in.Image)
-		if err != nil {
-			return nil, types.Result{}, fmt.Errorf("error while getting list of conntrack entries: %w", err)
-		}
 	} else {
 		stdout, err = s.getConntrackUsingCLI(ctx, req, in.Node, in.Image, in.Command, in.FilterParameters)
-		if err != nil {
-			return nil, types.Result{}, fmt.Errorf("error while getting list of conntrack entries: %w", err)
-		}
 	}
+	if err != nil {
+		return nil, types.Result{}, fmt.Errorf("error while getting list of conntrack entries: %w", err)
+	}
+
 	stdout = limitOutputLines(stdout, in.MaxLines)
 	return nil, types.Result{Data: stdout}, nil
 }

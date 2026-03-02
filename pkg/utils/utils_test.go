@@ -1,9 +1,47 @@
 package utils
 
 import (
+	"context"
 	"slices"
 	"testing"
+	"time"
 )
+
+func TestApplyTimeout(t *testing.T) {
+	t.Run("positive timeout sets deadline", func(t *testing.T) {
+		ctx := context.Background()
+		newCtx, cancel := ApplyTimeout(ctx, 5*time.Second)
+		defer cancel()
+
+		deadline, ok := newCtx.Deadline()
+		if !ok {
+			t.Fatal("expected context to have a deadline")
+		}
+		if time.Until(deadline) > 5*time.Second {
+			t.Fatalf("deadline too far in the future: %v", deadline)
+		}
+	})
+
+	t.Run("zero timeout returns original context", func(t *testing.T) {
+		ctx := context.Background()
+		newCtx, cancel := ApplyTimeout(ctx, 0)
+		defer cancel()
+
+		if _, ok := newCtx.Deadline(); ok {
+			t.Fatal("expected context to have no deadline")
+		}
+	})
+
+	t.Run("negative timeout returns original context", func(t *testing.T) {
+		ctx := context.Background()
+		newCtx, cancel := ApplyTimeout(ctx, -1*time.Second)
+		defer cancel()
+
+		if _, ok := newCtx.Deadline(); ok {
+			t.Fatal("expected context to have no deadline")
+		}
+	})
+}
 
 func TestStripEmptyLines(t *testing.T) {
 	tests := []struct {

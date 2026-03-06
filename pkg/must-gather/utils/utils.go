@@ -7,7 +7,7 @@ import (
 )
 
 // ValidateMustGatherPath validates the must gather path. It will check if the path is not empty,
-// exists, is an absolute path and contains the must-gather.log file. If the path is not valid,
+// exists, is an absolute path and contains the must-gather.logs file. If the path is not valid,
 // it will return an error.
 func ValidateMustGatherPath(mustGatherPath string) error {
 	if mustGatherPath == "" {
@@ -24,11 +24,11 @@ func ValidateMustGatherPath(mustGatherPath string) error {
 		return fmt.Errorf("failed to stat must gather path %s: %w", mustGatherPath, err)
 	}
 
-	if _, err := os.Stat(filepath.Join(mustGatherPath, "must-gather.log")); err != nil {
+	if _, err := os.Stat(filepath.Join(mustGatherPath, "must-gather.logs")); err != nil {
 		if os.IsNotExist(err) {
-			return fmt.Errorf("must gather log file %s not found: %w", filepath.Join(mustGatherPath, "must-gather.log"), err)
+			return fmt.Errorf("must gather log file %s not found: %w", filepath.Join(mustGatherPath, "must-gather.logs"), err)
 		}
-		return fmt.Errorf("failed to stat must gather log file %s: %w", filepath.Join(mustGatherPath, "must-gather.log"), err)
+		return fmt.Errorf("failed to stat must gather log file %s: %w", filepath.Join(mustGatherPath, "must-gather.logs"), err)
 	}
 	return nil
 }

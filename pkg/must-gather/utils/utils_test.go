@@ -38,7 +38,7 @@ func TestValidateMustGatherPath(t *testing.T) {
 			wantError:      true,
 		},
 		{
-			testName:       "absolute path without must-gather.log",
+			testName:       "absolute path without must-gather.logs",
 			mustGatherPath: filepath.Join(gitRoot, "pkg", "must-gather", "testdata", "invalid-must-gather"),
 			wantError:      true,
 		},

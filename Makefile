@@ -42,11 +42,12 @@ undeploy-kind-ovnk:
 NVM_VERSION := 0.40.3
 NODE_VERSION := 22.20.0
 NPM_VERSION := 11.6.1
+GINKGO_VERSION := v2.26.0
 MCP_MODE ?= live-cluster
 
 .PHONY: run-e2e
 run-e2e:
-	./hack/run-e2e.sh $(NVM_VERSION) $(NODE_VERSION) $(NPM_VERSION) "$(MCP_MODE)"
+	./hack/run-e2e.sh $(NVM_VERSION) $(NODE_VERSION) $(NPM_VERSION) $(GINKGO_VERSION) "$(MCP_MODE)" "$(FOCUS)"
 
 .PHONY: test-e2e
 test-e2e: build

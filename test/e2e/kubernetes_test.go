@@ -39,7 +39,7 @@ var _ = Describe("Kubernetes Tools", func() {
 
 			By("Getting the secret")
 			output, err := mcpInspector.
-				MethodCall(resourceGetToolName, map[string]string{
+				MethodCall(resourceGetToolName, map[string]any{
 					"group":     "",
 					"version":   "v1",
 					"kind":      "Secret",
@@ -87,7 +87,7 @@ var _ = Describe("Kubernetes Tools", func() {
 
 			By("Getting the secret")
 			output, err := mcpInspector.
-				MethodCall(resourceGetToolName, map[string]string{
+				MethodCall(resourceGetToolName, map[string]any{
 					"group":       "",
 					"version":     "v1",
 					"kind":        "Secret",
@@ -131,7 +131,7 @@ var _ = Describe("Kubernetes Tools", func() {
 
 			By("Listing secrets")
 			output, err := mcpInspector.
-				MethodCall(resourceListToolName, map[string]string{
+				MethodCall(resourceListToolName, map[string]any{
 					"group":     "",
 					"version":   "v1",
 					"kind":      "Secret",

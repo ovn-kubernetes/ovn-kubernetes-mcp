@@ -1,6 +1,7 @@
 package inspector
 
 import (
+	"encoding/json"
 	"fmt"
 	"os/exec"
 )
@@ -16,7 +17,7 @@ type MCPInspector struct {
 	command      string
 	methodType   string
 	toolName     string
-	toolArgs     map[string]string
+	toolArgs     map[string]any
 	commandflags map[string]string
 }
 
@@ -39,7 +40,7 @@ func (i *MCPInspector) MethodList() *MCPInspector {
 	return i
 }
 
-func (i *MCPInspector) MethodCall(toolName string, toolArgs map[string]string) *MCPInspector {
+func (i *MCPInspector) MethodCall(toolName string, toolArgs map[string]any) *MCPInspector {
 	i.methodType = string(MethodTypeCall)
 	i.toolName = toolName
 	i.toolArgs = toolArgs
@@ -90,9 +91,27 @@ func (i *MCPInspector) getCmdArgs() (string, []string, error) {
 		args = append(args, "--tool-name")
 		args = append(args, i.toolName)
 		for key, value := range i.toolArgs {
-			if value != "" {
+			var valueStr string
+			switch v := value.(type) {
+			case string:
+				valueStr = v
+			case bool, int, int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64, float32, float64:
+				valueStr = fmt.Sprint(v)
+			case []string:
+				if len(v) == 0 {
+					continue
+				}
+				b, err := json.Marshal(v)
+				if err != nil {
+					return "", nil, fmt.Errorf("serialize tool-arg %s: %w", key, err)
+				}
+				valueStr = string(b)
+			default:
+				return "", nil, fmt.Errorf("unsupported tool-arg type for %s: %T", key, value)
+			}
+			if valueStr != "" {
 				args = append(args, "--tool-arg")
-				args = append(args, fmt.Sprintf("%s=%s", key, value))
+				args = append(args, fmt.Sprintf("%s=%s", key, valueStr))
 			}
 		}
 	}

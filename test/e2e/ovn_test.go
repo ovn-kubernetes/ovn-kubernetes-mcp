@@ -53,7 +53,7 @@ var _ = Describe("OVN Tools", func() {
 
 			By("Running ovn-show for NBDB")
 			output, err := mcpInspector.
-				MethodCall(ovnShowToolName, map[string]string{
+				MethodCall(ovnShowToolName, map[string]any{
 					"namespace": namespace,
 					"name":      podName,
 					"database":  "nbdb",
@@ -80,7 +80,7 @@ var _ = Describe("OVN Tools", func() {
 
 			By("Running ovn-show for SBDB")
 			output, err := mcpInspector.
-				MethodCall(ovnShowToolName, map[string]string{
+				MethodCall(ovnShowToolName, map[string]any{
 					"namespace": namespace,
 					"name":      podName,
 					"database":  "sbdb",

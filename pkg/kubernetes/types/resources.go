@@ -15,8 +15,7 @@ type GetResourceResult struct {
 type ListParams struct {
 	Namespace     string `json:"namespace,omitempty"`
 	LabelSelector string `json:"label_selector,omitempty"`
-	// OutputType is the output type of the resource. If set, it can be YAML, JSON or wide.
-	OutputType OutputType `json:"output_type,omitempty"`
+	OutputParams
 }
 
 // ListResourcesParams is a type that contains the group, version, kind, namespace and output type of a resource.

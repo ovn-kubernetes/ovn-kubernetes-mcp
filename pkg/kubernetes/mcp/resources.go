@@ -21,6 +21,9 @@ func (s *MCPServer) GetResource(ctx context.Context, req *mcp.CallToolRequest, i
 	if in.Name == "" {
 		err = errors.Join(err, errors.New("name is required"))
 	}
+	if errOutputParams := in.OutputParams.ValidateOutputParams(); errOutputParams != nil {
+		err = errors.Join(err, errOutputParams)
+	}
 	if err != nil {
 		return nil, types.GetResourceResult{}, err
 	}
@@ -36,6 +39,11 @@ func (s *MCPServer) GetResource(ctx context.Context, req *mcp.CallToolRequest, i
 	switch in.OutputType {
 	case types.JSONOutputType:
 		err = resourceData.ToJSON(resource)
+		if err != nil {
+			return nil, types.GetResourceResult{}, err
+		}
+	case types.JSONPathOutputType:
+		err = resourceData.ToJSONPath(in.JSONPathTemplate, resource.UnstructuredContent())
 		if err != nil {
 			return nil, types.GetResourceResult{}, err
 		}
@@ -62,6 +70,9 @@ func (s *MCPServer) ListResources(ctx context.Context, req *mcp.CallToolRequest,
 	if in.Kind == "" {
 		err = errors.Join(err, errors.New("kind is required"))
 	}
+	if errOutputParams := in.OutputParams.ValidateOutputParams(); errOutputParams != nil {
+		err = errors.Join(err, errOutputParams)
+	}
 	if err != nil {
 		return nil, types.ListResourcesResult{}, err
 	}
@@ -78,26 +89,36 @@ func (s *MCPServer) ListResources(ctx context.Context, req *mcp.CallToolRequest,
 	}
 
 	resourcesData := make([]types.Resource, 0)
-	// Loop through the resources and get the resource data.
-	for _, resource := range resources.Items {
+	// If the output type is JSONPath, get the JSONPath data from the resources.
+	if in.OutputType == types.JSONPathOutputType {
 		resourceData := types.Resource{}
-		// Get the formatted data from the resource.
-		switch in.OutputType {
-		case types.JSONOutputType:
-			err = resourceData.ToJSON(&resource)
-			if err != nil {
-				return nil, types.ListResourcesResult{}, err
-			}
-		case types.YAMLOutputType:
-			err = resourceData.ToYAML(&resource)
-			if err != nil {
-				return nil, types.ListResourcesResult{}, err
-			}
-		default:
-			// If the output type is not JSON or YAML, get the resource data.
-			resourceData.GetResourceData(&resource, in.OutputType == types.WideOutputType)
+		err = resourceData.ToJSONPath(in.JSONPathTemplate, resources.UnstructuredContent())
+		if err != nil {
+			return nil, types.ListResourcesResult{}, err
 		}
 		resourcesData = append(resourcesData, resourceData)
+	} else {
+		// Loop through the resources and get the resource data.
+		for _, resource := range resources.Items {
+			resourceData := types.Resource{}
+			// Get the formatted data from the resource.
+			switch in.OutputType {
+			case types.JSONOutputType:
+				err = resourceData.ToJSON(&resource)
+				if err != nil {
+					return nil, types.ListResourcesResult{}, err
+				}
+			case types.YAMLOutputType:
+				err = resourceData.ToYAML(&resource)
+				if err != nil {
+					return nil, types.ListResourcesResult{}, err
+				}
+			default:
+				// If the output type is not JSON or YAML, get the resource data.
+				resourceData.GetResourceData(&resource, in.OutputType == types.WideOutputType)
+			}
+			resourcesData = append(resourcesData, resourceData)
+		}
 	}
 
 	return nil, types.ListResourcesResult{Resources: resourcesData}, nil

@@ -1,10 +1,13 @@
 package types
 
 import (
+	"bytes"
 	"encoding/json"
+	"fmt"
 	"time"
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/client-go/util/jsonpath"
 	yaml "sigs.k8s.io/yaml"
 )
 
@@ -20,6 +23,21 @@ func (j *FormattedOutput) ToJSON(data any) error {
 		return err
 	}
 	j.Data = string(jsonData)
+	return nil
+}
+
+// ToJSONPath gets the JSONPath data from a resource.
+func (j *FormattedOutput) ToJSONPath(template string, data map[string]any) error {
+	jp := jsonpath.New("jsonpath")
+	if err := jp.Parse(template); err != nil {
+		return err
+	}
+	dataBuffer := bytes.NewBuffer(nil)
+	err := jp.Execute(dataBuffer, data)
+	if err != nil {
+		return fmt.Errorf("failed to execute jsonpath template %s, error: %w", template, err)
+	}
+	j.Data = dataBuffer.String()
 	return nil
 }
 
@@ -82,13 +100,36 @@ const (
 	YAMLOutputType OutputType = "yaml"
 	// JSONOutputType is the output type for JSON data.
 	JSONOutputType OutputType = "json"
+	// JSONPathOutputType is the output type for JSONPath data.
+	JSONPathOutputType OutputType = "jsonpath"
 	// WideOutputType is the output type for detailed data.
 	WideOutputType OutputType = "wide"
 )
 
+// OutputParams is a type that contains the output type and JSONPathTemplate of a resource.
+type OutputParams struct {
+	// OutputType is the output type of the resource. If set, it can be YAML, JSON, JSONPath or wide.
+	OutputType OutputType `json:"output_type,omitempty"`
+	// JSONPathTemplate is the JSONPathTemplate template to use for the output.
+	JSONPathTemplate string `json:"json_path_template,omitempty"`
+}
+
+// ValidateOutputParams validates the output parameters.
+func (o *OutputParams) ValidateOutputParams() error {
+	if o.OutputType == JSONPathOutputType && o.JSONPathTemplate == "" {
+		return fmt.Errorf("json_path_template is required when output_type is jsonpath")
+	}
+	if o.OutputType == JSONPathOutputType {
+		err := jsonpath.NewParser("validate").Parse(o.JSONPathTemplate)
+		if err != nil {
+			return fmt.Errorf("invalid json_path_template: %s, error: %w", o.JSONPathTemplate, err)
+		}
+	}
+	return nil
+}
+
 // GetParams is a type that contains the name, namespace and output type of a resource.
 type GetParams struct {
 	NamespacedNameParams
-	// OutputType is the output type of the resource. If set, it can be YAML, JSON or wide.
-	OutputType OutputType `json:"output_type,omitempty"`
+	OutputParams
 }

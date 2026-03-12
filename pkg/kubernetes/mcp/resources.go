@@ -3,6 +3,7 @@ package mcp
 import (
 	"context"
 	"errors"
+	"strings"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"github.com/ovn-kubernetes/ovn-kubernetes-mcp/pkg/kubernetes/types"
@@ -20,6 +21,9 @@ func (s *MCPServer) GetResource(ctx context.Context, req *mcp.CallToolRequest, i
 	}
 	if in.Name == "" {
 		err = errors.Join(err, errors.New("name is required"))
+	}
+	if errOutputParams := in.OutputParams.ValidateOutputParams(); errOutputParams != nil {
+		err = errors.Join(err, errOutputParams)
 	}
 	if err != nil {
 		return nil, types.GetResourceResult{}, err
@@ -45,8 +49,16 @@ func (s *MCPServer) GetResource(ctx context.Context, req *mcp.CallToolRequest, i
 			return nil, types.GetResourceResult{}, err
 		}
 	default:
-		// If the output type is not JSON or YAML, get the resource data.
-		resourceData.GetResourceData(resource, in.OutputType == types.WideOutputType)
+		// If the output type is jsonpath, get the jsonpath data from the resource.
+		if jsonPathTemplate, found := strings.CutPrefix(string(in.OutputType), string(types.JSONPathOutputType)+"="); found {
+			err = resourceData.ToJSONPath(jsonPathTemplate, resource.UnstructuredContent())
+			if err != nil {
+				return nil, types.GetResourceResult{}, err
+			}
+		} else {
+			// If the output type is not json, yaml or jsonpath, get the resource data.
+			resourceData.GetResourceData(resource, in.OutputType == types.WideOutputType)
+		}
 	}
 
 	return nil, types.GetResourceResult{Resource: resourceData}, nil
@@ -61,6 +73,9 @@ func (s *MCPServer) ListResources(ctx context.Context, req *mcp.CallToolRequest,
 	}
 	if in.Kind == "" {
 		err = errors.Join(err, errors.New("kind is required"))
+	}
+	if errOutputParams := in.OutputParams.ValidateOutputParams(); errOutputParams != nil {
+		err = errors.Join(err, errOutputParams)
 	}
 	if err != nil {
 		return nil, types.ListResourcesResult{}, err
@@ -78,26 +93,36 @@ func (s *MCPServer) ListResources(ctx context.Context, req *mcp.CallToolRequest,
 	}
 
 	resourcesData := make([]types.Resource, 0)
-	// Loop through the resources and get the resource data.
-	for _, resource := range resources.Items {
+	// If the output type is jsonpath, get the jsonpath data from the resources.
+	if jsonPathTemplate, found := strings.CutPrefix(string(in.OutputType), string(types.JSONPathOutputType)+"="); found {
 		resourceData := types.Resource{}
-		// Get the formatted data from the resource.
-		switch in.OutputType {
-		case types.JSONOutputType:
-			err = resourceData.ToJSON(&resource)
-			if err != nil {
-				return nil, types.ListResourcesResult{}, err
-			}
-		case types.YAMLOutputType:
-			err = resourceData.ToYAML(&resource)
-			if err != nil {
-				return nil, types.ListResourcesResult{}, err
-			}
-		default:
-			// If the output type is not JSON or YAML, get the resource data.
-			resourceData.GetResourceData(&resource, in.OutputType == types.WideOutputType)
+		err = resourceData.ToJSONPath(jsonPathTemplate, resources.UnstructuredContent())
+		if err != nil {
+			return nil, types.ListResourcesResult{}, err
 		}
 		resourcesData = append(resourcesData, resourceData)
+	} else {
+		// Loop through the resources and get the resource data.
+		for _, resource := range resources.Items {
+			resourceData := types.Resource{}
+			// Get the formatted data from the resource.
+			switch in.OutputType {
+			case types.JSONOutputType:
+				err = resourceData.ToJSON(&resource)
+				if err != nil {
+					return nil, types.ListResourcesResult{}, err
+				}
+			case types.YAMLOutputType:
+				err = resourceData.ToYAML(&resource)
+				if err != nil {
+					return nil, types.ListResourcesResult{}, err
+				}
+			default:
+				// If the output type is not json, yaml or jsonpath, get the resource data.
+				resourceData.GetResourceData(&resource, in.OutputType == types.WideOutputType)
+			}
+			resourcesData = append(resourcesData, resourceData)
+		}
 	}
 
 	return nil, types.ListResourcesResult{Resources: resourcesData}, nil

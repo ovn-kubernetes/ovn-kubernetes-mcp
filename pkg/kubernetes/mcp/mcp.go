@@ -94,7 +94,7 @@ Parameters:
 - kind (required): Kind of the resource (e.g., "Pod", "Service", "Deployment", "ConfigMap")
 - name (required): Name of the resource to retrieve
 - namespace (optional): Namespace of the resource. If omitted, defaults to "default" for namespaced resources and empty for cluster-scoped resources
-- output_type (optional): Output format - 'yaml', 'json', or 'wide' (default: table format with name, namespace, age. wide will include labels and annotations)
+- output_type (optional): Output format - 'yaml', 'json', 'jsonpath', or 'wide' (default: table format with name, namespace, age. wide will include labels and annotations)
 
 Returns the resource definition in the requested format. Use this to inspect specific
 resource configurations, status, and metadata.
@@ -104,6 +104,7 @@ Examples:
 - Get a deployment as YAML: {"group": "apps", "version": "v1", "kind": "Deployment", "name": "my-deployment", "namespace": "default", "output_type": "yaml"}
 - Get a node (cluster-scoped): {"version": "v1", "kind": "Node", "name": "worker-0"}
 - Get a config map as JSON: {"version": "v1", "kind": "ConfigMap", "name": "my-config", "namespace": "kube-system", "output_type": "json"}
+- Get a pod name as JSONPath: {"version": "v1", "kind": "Pod", "name": "my-pod", "namespace": "default", "output_type": "jsonpath='{.metadata.name}'"}
 - Get detailed info: {"version": "v1", "kind": "Pod", "name": "my-pod", "namespace": "default", "output_type": "wide"}`,
 		}, s.GetResource)
 
@@ -121,7 +122,7 @@ Parameters:
 - kind (required): Kind of the resource (e.g., "Pod", "Service", "Deployment")
 - namespace (optional): Filter by namespace. If omitted, lists resources across all namespaces
 - label_selector (optional): Filter by label selector (e.g., "app=my-app", "component=network")
-- output_type (optional): Output format - 'yaml', 'json', or 'wide' (default: table format with name, namespace, age. wide will include labels and annotations)
+- output_type (optional): Output format - 'yaml', 'json', 'jsonpath', or 'wide' (default: table format with name, namespace, age. wide will include labels and annotations)
 
 Returns a list of matching resources. Use this to discover what resources exist in the
 cluster before retrieving specific ones with resource-get.
@@ -132,6 +133,7 @@ Examples:
 - List pods by label: {"version": "v1", "kind": "Pod", "namespace": "default", "label_selector": "app=my-app"}
 - List deployments as YAML: {"group": "apps", "version": "v1", "kind": "Deployment", "namespace": "default", "output_type": "yaml"}
 - List all nodes: {"version": "v1", "kind": "Node"}
-- List with detailed info: {"version": "v1", "kind": "Pod", "namespace": "kube-system", "output_type": "wide"}`,
+- List with detailed info: {"version": "v1", "kind": "Pod", "namespace": "kube-system", "output_type": "wide"}
+- List pod names as JSONPath: {"version": "v1", "kind": "Pod", "namespace": "default", "output_type": "jsonpath='{.items[*].metadata.name}'"}`,
 		}, s.ListResources)
 }

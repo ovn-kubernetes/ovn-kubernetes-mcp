@@ -43,7 +43,7 @@ Parameters:
 - kind (required): Kubernetes resource kind (e.g., Pod, Service, Node, Deployment, ConfigMap)
 - name (required): Name of the resource to retrieve
 - namespace (optional): Namespace of the resource (defaults to "default" for namespaced resources)
-- output_type (optional): Output format - 'yaml', 'json', or 'wide' (default: table format)
+- output_type (optional): Output format - 'yaml', 'json', 'wide', or 'jsonpath' (default: table format)
 
 Returns the resource definition in the requested format. Use this to inspect specific
 resource configurations, status, and metadata from the must-gather snapshot.
@@ -51,7 +51,8 @@ resource configurations, status, and metadata from the must-gather snapshot.
 Examples:
 - Get a pod: {"must_gather_path": "/path/to/must-gather", "kind": "Pod", "namespace": "default", "name": "my-pod"}
 - Get a node as YAML: {"must_gather_path": "/path/to/must-gather", "kind": "Node", "name": "worker-0", "output_type": "yaml"}
-- Get a config map: {"must_gather_path": "/path/to/must-gather", "kind": "ConfigMap", "namespace": "kube-system", "name": "my-config"}`,
+- Get a config map: {"must_gather_path": "/path/to/must-gather", "kind": "ConfigMap", "namespace": "kube-system", "name": "my-config"}
+- Get a pod name as JSONPath: {"must_gather_path": "/path/to/must-gather", "kind": "Pod", "namespace": "default", "name": "my-pod", "output_type": "jsonpath='{.metadata.name}'"}`,
 	}, s.GetResource)
 
 	mcp.AddTool(server, &mcp.Tool{
@@ -63,7 +64,7 @@ Parameters:
 - kind (required): Kubernetes resource kind (e.g., Pod, Service, Node, Deployment)
 - namespace (optional): Filter by namespace. If omitted, lists resources across all namespaces
 - label_selector (optional): Filter by label selector (e.g., 'app=ovnkube-node', 'component=network')
-- output_type (optional): Output format - 'yaml', 'json', or 'wide' (default: table format)
+- output_type (optional): Output format - 'yaml', 'json', 'wide', or 'jsonpath' (default: table format)
 
 Returns a list of matching resources. Use this to discover what resources exist in the
 must-gather snapshot before retrieving specific ones with must-gather-get-resource.
@@ -72,7 +73,8 @@ Examples:
 - List all pods in a namespace: {"must_gather_path": "/path/to/must-gather", "kind": "Pod", "namespace": "default"}
 - List all nodes: {"must_gather_path": "/path/to/must-gather", "kind": "Node"}
 - List pods by label: {"must_gather_path": "/path/to/must-gather", "kind": "Pod", "label_selector": "app=my-app"}
-- List services as JSON: {"must_gather_path": "/path/to/must-gather", "kind": "Service", "namespace": "kube-system", "output_type": "json"}`,
+- List services as JSON: {"must_gather_path": "/path/to/must-gather", "kind": "Service", "namespace": "kube-system", "output_type": "json"}
+- List pod names as JSONPath: {"must_gather_path": "/path/to/must-gather", "kind": "Pod", "namespace": "default", "output_type": "jsonpath='{.items[*].metadata.name}'"}`,
 	}, s.ListResources)
 
 	mcp.AddTool(server, &mcp.Tool{

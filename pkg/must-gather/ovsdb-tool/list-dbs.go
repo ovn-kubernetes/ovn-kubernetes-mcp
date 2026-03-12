@@ -57,7 +57,7 @@ func (s *OvsdbTool) getDatabaseToNodeMapping(ctx context.Context, mustGatherPath
 	}
 
 	// Get the list of all the pods
-	data, err := s.omcClient.ListResources(ctx, mustGatherPath, "pod", "", ovnkubeNodeLabelSelector, k8sTypes.JSONOutputType)
+	data, err := s.omcClient.ListResources(ctx, mustGatherPath, "pod", "", ovnkubeNodeLabelSelector, k8sTypes.OutputParams{OutputType: k8sTypes.JSONOutputType})
 	if err != nil {
 		return "", fmt.Errorf("failed to list pods: %w", err)
 	}

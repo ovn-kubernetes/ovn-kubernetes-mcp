@@ -12,7 +12,7 @@ import (
 
 // GetResource uses the omc command to get a resource. It will return an error if the
 // must gather path is not valid or the resource is not found.
-func (c *OmcClient) GetResource(ctx context.Context, mustGatherPath string, kind string, namespace, name string, outputType k8sTypes.OutputType) (string, error) {
+func (c *OmcClient) GetResource(ctx context.Context, mustGatherPath string, kind string, namespace, name string, outputParams k8sTypes.OutputParams) (string, error) {
 	// Validate the kind
 	if err := validateKubernetesName(kind, false); err != nil {
 		return "", fmt.Errorf("failed to validate kind: %w", err)
@@ -46,7 +46,7 @@ func (c *OmcClient) GetResource(ctx context.Context, mustGatherPath string, kind
 	}
 	args = append(args, "-n", namespace)
 	// Append the output type arguments
-	args = appendOutputTypeArgs(args, outputType)
+	args = appendOutputTypeArgs(args, outputParams)
 
 	// Get the resource from the omc command
 	output, err := exec.CommandContext(ctx, c.commandPath, args...).CombinedOutput()
@@ -63,7 +63,7 @@ func (c *OmcClient) GetResource(ctx context.Context, mustGatherPath string, kind
 
 // ListResources uses the omc command to list resources. It will return an error if the
 // must gather path is not valid.
-func (c *OmcClient) ListResources(ctx context.Context, mustGatherPath string, kind string, namespace string, labelSelector string, outputType k8sTypes.OutputType) (string, error) {
+func (c *OmcClient) ListResources(ctx context.Context, mustGatherPath string, kind string, namespace string, labelSelector string, outputParams k8sTypes.OutputParams) (string, error) {
 	// Validate the kind
 	if err := validateKubernetesName(kind, false); err != nil {
 		return "", fmt.Errorf("failed to validate kind: %w", err)
@@ -96,7 +96,7 @@ func (c *OmcClient) ListResources(ctx context.Context, mustGatherPath string, ki
 		args = append(args, "-l", labelSelector)
 	}
 	// Append the output type arguments
-	args = appendOutputTypeArgs(args, outputType)
+	args = appendOutputTypeArgs(args, outputParams)
 	// Append the namespace argument
 	if namespace != "" {
 		args = append(args, "-n", namespace)
@@ -113,7 +113,7 @@ func (c *OmcClient) ListResources(ctx context.Context, mustGatherPath string, ki
 	// If the output contains "No resources", return an empty string.
 	if strings.Contains(strings.ToLower(string(output)), "no resources") {
 		// Format the output based on the output type.
-		switch outputType {
+		switch outputParams.OutputType {
 		case k8sTypes.JSONOutputType:
 			return `{
   "apiVersion": "v1",
@@ -133,14 +133,17 @@ items: []`, nil
 }
 
 // appendOutputTypeArgs appends the output type arguments to the arguments.
-func appendOutputTypeArgs(args []string, outputType k8sTypes.OutputType) []string {
-	switch outputType {
+func appendOutputTypeArgs(args []string, outputParams k8sTypes.OutputParams) []string {
+	switch outputParams.OutputType {
 	case k8sTypes.JSONOutputType:
 		return append(args, "-o", "json")
 	case k8sTypes.YAMLOutputType:
 		return append(args, "-o", "yaml")
 	case k8sTypes.WideOutputType:
 		return append(args, "-o", "wide")
+	}
+	if strings.HasPrefix(string(outputParams.OutputType), string(k8sTypes.JSONPathOutputType)+"=") {
+		return append(args, "-o", string(outputParams.OutputType))
 	}
 	return args
 }

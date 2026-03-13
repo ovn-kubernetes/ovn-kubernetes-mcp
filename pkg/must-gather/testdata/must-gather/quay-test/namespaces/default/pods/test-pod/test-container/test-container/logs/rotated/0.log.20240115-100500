@@ -1,0 +1,7 @@
+2024-01-15T10:01:00.100000Z Starting application...
+2024-01-15T10:01:00.200000Z Loaded config from /etc/app/config.yaml
+2024-01-15T10:01:00.300000Z Listening on 0.0.0.0:8080
+2024-01-15T10:01:05.400000Z INFO: Received first request from 10.128.0.5
+2024-01-15T10:01:10.500000Z WARN: Connection timeout to upstream (retrying)
+2024-01-15T10:01:12.600000Z ERROR: Failed to connect after 3 attempts
+2024-01-15T10:01:15.700000Z Fatal error, exiting

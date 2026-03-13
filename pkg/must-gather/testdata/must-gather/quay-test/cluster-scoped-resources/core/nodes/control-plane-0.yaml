@@ -1,0 +1,51 @@
+---
+apiVersion: v1
+kind: Node
+metadata:
+  creationTimestamp: "2024-01-15T09:00:00Z"
+  annotations:
+    k8s.ovn.org/host-cidrs: '["192.168.1.10/24"]'
+    k8s.ovn.org/l3-gateway-config: '{"default":{"mode":"shared","bridge-id":"br-ex","ip-address":"192.168.1.10/24","next-hops":["192.168.1.1"],"next-hop":"192.168.1.1","node-port-enable":"true","vlan-id":"0"}}'
+    k8s.ovn.org/node-chassis-id: a1b2c3d4-e5f6-4789-a012-3456789abcde
+    k8s.ovn.org/node-id: "1"
+    k8s.ovn.org/node-primary-ifaddr: '{"ipv4":"192.168.1.10/24"}'
+    k8s.ovn.org/node-subnets: '{"default":["10.128.0.0/23"]}'
+    k8s.ovn.org/node-transit-switch-port-ifaddr: '{"ipv4":"100.88.0.2/16"}'
+  labels:
+    kubernetes.io/arch: amd64
+    kubernetes.io/hostname: control-plane-0
+    kubernetes.io/os: linux
+    node-role.kubernetes.io/control-plane: ""
+    node-role.kubernetes.io/master: ""
+  name: control-plane-0
+  resourceVersion: "1000"
+  uid: control-plane-0-uid
+spec:
+  taints:
+  - effect: NoSchedule
+    key: node-role.kubernetes.io/master
+status:
+  addresses:
+  - address: 192.168.1.10
+    type: InternalIP
+  - address: control-plane-0
+    type: Hostname
+  allocatable:
+    cpu: "4"
+    memory: 16Gi
+    pods: "250"
+  capacity:
+    cpu: "4"
+    memory: 16Gi
+    pods: "250"
+  conditions:
+  - lastHeartbeatTime: "2024-01-15T09:00:00Z"
+    lastTransitionTime: "2024-01-15T09:00:00Z"
+    status: "True"
+    type: Ready
+  nodeInfo:
+    architecture: amd64
+    kernelVersion: 5.14.0
+    kubeletVersion: v1.28.0
+    operatingSystem: linux
+    osImage: Linux

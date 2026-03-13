@@ -1,8 +1,6 @@
 package e2e
 
 import (
-	"path/filepath"
-	"runtime"
 	"strings"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -14,15 +12,7 @@ import (
 
 // getTestdataSosreportPath computes the path to the testdata sosreport directory
 func getTestdataSosreportPath() string {
-	_, thisFile, _, ok := runtime.Caller(0)
-	if !ok {
-		Expect(ok).To(BeTrue())
-	}
-	path, err := filepath.Abs(filepath.Join(filepath.Dir(thisFile), "../../pkg/sosreport/mcp/testdata/sosreport"))
-	if err != nil {
-		Expect(err).NotTo(HaveOccurred())
-	}
-	return path
+	return utils.GetTestdataPath("../../pkg/sosreport/mcp/testdata/sosreport")
 }
 
 var _ = Describe("[offline] Sosreport Tools", func() {
@@ -39,7 +29,7 @@ var _ = Describe("[offline] Sosreport Tools", func() {
 		func(sosreportPath string, shouldFail bool) {
 			By("Calling sos-list-plugins")
 			output, err := mcpInspector.
-				MethodCall(sosListPluginsToolName, map[string]string{
+				MethodCall(sosListPluginsToolName, map[string]any{
 					"sosreport_path": sosreportPath,
 				}).Execute()
 
@@ -72,7 +62,7 @@ var _ = Describe("[offline] Sosreport Tools", func() {
 		func(plugin string, expectedCount int, expectedCommands map[string]string, shouldFail bool) {
 			By("Calling sos-list-commands for " + plugin)
 			output, err := mcpInspector.
-				MethodCall(sosListCommandsToolName, map[string]string{
+				MethodCall(sosListCommandsToolName, map[string]any{
 					"sosreport_path": testdataSosreportPath,
 					"plugin":         plugin,
 				}).Execute()
@@ -113,7 +103,7 @@ var _ = Describe("[offline] Sosreport Tools", func() {
 		func(pattern string, expectedTotal int, expectedPlugin string, expectedExecPattern string) {
 			By("Calling sos-search-commands with pattern '" + pattern + "'")
 			output, err := mcpInspector.
-				MethodCall(sosSearchCommandsToolName, map[string]string{
+				MethodCall(sosSearchCommandsToolName, map[string]any{
 					"sosreport_path": testdataSosreportPath,
 					"pattern":        pattern,
 				}).Execute()
@@ -143,7 +133,7 @@ var _ = Describe("[offline] Sosreport Tools", func() {
 		func(filepath string, expectedSubstrings []string, shouldFail bool) {
 			By("Calling sos-get-command")
 			output, err := mcpInspector.
-				MethodCall(sosGetCommandToolName, map[string]string{
+				MethodCall(sosGetCommandToolName, map[string]any{
 					"sosreport_path": testdataSosreportPath,
 					"filepath":       filepath,
 				}).Execute()
@@ -191,7 +181,7 @@ var _ = Describe("[offline] Sosreport Tools", func() {
 	It("Get Command should filter command output by pattern", func() {
 		By("Calling sos-get-command with pattern filter")
 		output, err := mcpInspector.
-			MethodCall(sosGetCommandToolName, map[string]string{
+			MethodCall(sosGetCommandToolName, map[string]any{
 				"sosreport_path": testdataSosreportPath,
 				"filepath":       "sos_commands/networking/ip_addr_show",
 				"pattern":        "eth0",
@@ -215,7 +205,7 @@ var _ = Describe("[offline] Sosreport Tools", func() {
 
 	DescribeTable("Search Pod Logs",
 		func(pattern string, podFilter string, expectedSubstrings []string) {
-			params := map[string]string{
+			params := map[string]any{
 				"sosreport_path": testdataSosreportPath,
 				"pattern":        pattern,
 			}

@@ -1,0 +1,8 @@
+2024-01-15T10:23:01.123456Z Starting application...
+2024-01-15T10:23:01.234567Z Loaded config from /etc/app/config.yaml
+2024-01-15T10:23:02.345678Z Listening on 0.0.0.0:8080
+2024-01-15T10:23:05.456789Z INFO: Received first request from 10.128.0.5
+2024-01-15T10:23:10.567890Z WARN: Connection timeout to upstream service (retrying)
+2024-01-15T10:23:12.678901Z ERROR: Failed to connect after 3 attempts; backing off
+2024-01-15T10:23:15.789012Z ERROR: Unrecoverable error: connection refused
+2024-01-15T10:23:15.789013Z Fatal error, exiting

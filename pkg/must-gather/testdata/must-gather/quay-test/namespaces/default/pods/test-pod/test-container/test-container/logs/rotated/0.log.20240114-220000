@@ -1,0 +1,5 @@
+2024-01-14T22:00:00.100000Z Starting application...
+2024-01-14T22:00:00.200000Z Application initialized
+2024-01-14T22:00:01.300000Z Listening on port 8080
+2024-01-14T22:00:05.400000Z Health check passed
+2024-01-14T22:05:00.500000Z Log rotation triggered (size limit)

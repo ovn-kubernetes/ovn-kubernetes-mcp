@@ -43,14 +43,14 @@ Parameters:
 - kind (required): Kubernetes resource kind (e.g., Pod, Service, Node, Deployment, ConfigMap)
 - name (required): Name of the resource to retrieve
 - namespace (optional): Namespace of the resource (defaults to "default" for namespaced resources)
-- outputType (optional): Output format - 'yaml', 'json', or 'wide' (default: table format)
+- output_type (optional): Output format - 'yaml', 'json', or 'wide' (default: table format)
 
 Returns the resource definition in the requested format. Use this to inspect specific
 resource configurations, status, and metadata from the must-gather snapshot.
 
 Examples:
 - Get a pod: {"must_gather_path": "/path/to/must-gather", "kind": "Pod", "namespace": "default", "name": "my-pod"}
-- Get a node as YAML: {"must_gather_path": "/path/to/must-gather", "kind": "Node", "name": "worker-0", "outputType": "yaml"}
+- Get a node as YAML: {"must_gather_path": "/path/to/must-gather", "kind": "Node", "name": "worker-0", "output_type": "yaml"}
 - Get a config map: {"must_gather_path": "/path/to/must-gather", "kind": "ConfigMap", "namespace": "kube-system", "name": "my-config"}`,
 	}, s.GetResource)
 
@@ -62,8 +62,8 @@ Parameters:
 - must_gather_path (required): Absolute path to extracted must-gather directory
 - kind (required): Kubernetes resource kind (e.g., Pod, Service, Node, Deployment)
 - namespace (optional): Filter by namespace. If omitted, lists resources across all namespaces
-- labelSelector (optional): Filter by label selector (e.g., 'app=ovnkube-node', 'component=network')
-- outputType (optional): Output format - 'yaml', 'json', or 'wide' (default: table format)
+- label_selector (optional): Filter by label selector (e.g., 'app=ovnkube-node', 'component=network')
+- output_type (optional): Output format - 'yaml', 'json', or 'wide' (default: table format)
 
 Returns a list of matching resources. Use this to discover what resources exist in the
 must-gather snapshot before retrieving specific ones with must-gather-get-resource.
@@ -71,8 +71,8 @@ must-gather snapshot before retrieving specific ones with must-gather-get-resour
 Examples:
 - List all pods in a namespace: {"must_gather_path": "/path/to/must-gather", "kind": "Pod", "namespace": "default"}
 - List all nodes: {"must_gather_path": "/path/to/must-gather", "kind": "Node"}
-- List pods by label: {"must_gather_path": "/path/to/must-gather", "kind": "Pod", "labelSelector": "app=my-app"}
-- List services as JSON: {"must_gather_path": "/path/to/must-gather", "kind": "Service", "namespace": "kube-system", "outputType": "json"}`,
+- List pods by label: {"must_gather_path": "/path/to/must-gather", "kind": "Pod", "label_selector": "app=my-app"}
+- List services as JSON: {"must_gather_path": "/path/to/must-gather", "kind": "Service", "namespace": "kube-system", "output_type": "json"}`,
 	}, s.ListResources)
 
 	mcp.AddTool(server, &mcp.Tool{
@@ -87,8 +87,10 @@ Parameters:
 - previous (optional): If true, get logs from previous container instance (useful for crash analysis)
 - rotated (optional): If true, include rotated log files
 - pattern (optional): Regex pattern to filter log lines (grep-style filtering)
-- head (optional): Return only first N lines (cannot be used with tail). Default: %d if tail is not specified
-- tail (optional): Return only last N lines (cannot be used with head)
+- head (optional): Return only first N lines. Default: %d if tail is not specified
+- tail (optional): Return only last N lines.
+- apply_tail_first (optional): If both head and tail are set and apply_tail_first is true,
+apply tail before head. Default: false
 
 Returns log lines as an array. If neither head nor tail is specified, returns the first %d lines
 by default. Use pattern matching to search for specific errors, warnings, or events in the logs.

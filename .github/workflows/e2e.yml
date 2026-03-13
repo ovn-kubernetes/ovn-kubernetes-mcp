@@ -56,6 +56,29 @@ jobs:
           which jinjanate
           jinjanate --version
 
+      - name: Install offline test dependencies
+        if: matrix.mode == 'offline'
+        run: |
+          set -euo pipefail
+          set -x
+          # openvswitch-common provides ovsdb-tool for offline must-gather inspection
+          sudo apt-get update
+          sudo apt-get install -y openvswitch-common
+          # omc (OpenShift Must-Gather Client) for inspecting must-gather like oc
+          OMC_VERSION="v3.13.1"
+          OMC_ARCH="$(uname -m)"
+          OMC_ARTIFACT="omc_Linux_${OMC_ARCH}.tar.gz"
+          OMC_URL="https://github.com/gmeghnag/omc/releases/download/${OMC_VERSION}"
+          curl --fail --location --silent --show-error "${OMC_URL}/checksums.txt" -o /tmp/omc_checksums.txt
+          curl --fail --location --silent --show-error "${OMC_URL}/${OMC_ARTIFACT}" -o "/tmp/${OMC_ARTIFACT}"
+          expected_sha="$(awk -v a="${OMC_ARTIFACT}" '$2==a {print $1; exit}' /tmp/omc_checksums.txt)"
+          test -n "${expected_sha}" || { echo "Missing checksum entry for ${OMC_ARTIFACT}"; exit 1; }
+          echo "${expected_sha}  /tmp/${OMC_ARTIFACT}" | md5sum --check --status -
+          tar xzf "/tmp/${OMC_ARTIFACT}" -C /tmp omc
+          chmod +x /tmp/omc
+          sudo mv /tmp/omc /usr/local/bin/
+          omc -h
+
       - name: Build
         run: make build
 

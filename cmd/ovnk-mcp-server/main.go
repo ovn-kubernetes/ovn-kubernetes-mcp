@@ -150,7 +150,7 @@ func parseFlags() *MCPServerConfig {
 	flag.StringVar(&cfg.Kubernetes.Kubeconfig, "kubeconfig", "", "Path to the kubeconfig file")
 	flag.StringVar(&cfg.PwruImage, "pwru-image", "docker.io/cilium/pwru:v1.0.10", "Container image for pwru operations")
 	flag.StringVar(&cfg.TcpdumpImage, "tcpdump-image", "nicolaka/netshoot:v0.13", "Container image for tcpdump operations")
-	flag.StringVar(&cfg.Kernel.Image, "kernel-image", "nicolaka/netshoot:v0.13", "Container image for kernel operations")
+	flag.StringVar(&cfg.Kernel.Image, "kernel-image", "nicolaka/netshoot:v0.15", "Container image for kernel operations")
 	flag.Parse()
 	return cfg
 }

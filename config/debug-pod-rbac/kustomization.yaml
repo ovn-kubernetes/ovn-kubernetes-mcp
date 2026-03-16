@@ -1,0 +1,11 @@
+# Separate kustomization so Role/RoleBinding stay in namespace "default".
+# The parent config/kustomization.yaml sets namespace: ovn-kubernetes-mcp, which
+# would otherwise rewrite these objects into the wrong namespace (see nodes.go).
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: default
+
+resources:
+  - role.yaml
+  - rolebinding.yaml

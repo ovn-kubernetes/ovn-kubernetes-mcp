@@ -1,0 +1,62 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ovnk-mcp-server
+  namespace: ovn-kubernetes-mcp
+  labels:
+    app.kubernetes.io/name: ovn-kubernetes-mcp
+    app.kubernetes.io/component: mcp-server
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: ovn-kubernetes-mcp
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: ovn-kubernetes-mcp
+        app.kubernetes.io/component: mcp-server
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 0
+      serviceAccountName: ovnk-mcp-server
+      containers:
+        - name: ovnk-mcp-server
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+          # Default image when applying this manifest as-is. To override at deploy time (e.g. CI or
+          # local kind): use `make deploy-ovnk-mcp-k8s IMAGE=<image>` which patches the image in the deployment.
+          image: localhost/ovnk-mcp-server:dev
+          imagePullPolicy: IfNotPresent
+          args:
+            - --transport=http
+            - --host=0.0.0.0
+            - --port=8080
+            - --mode=live-cluster
+          ports:
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+          livenessProbe:
+            tcpSocket:
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 30
+          readinessProbe:
+            tcpSocket:
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          resources:
+            requests:
+              memory: "64Mi"
+              cpu: "50m"
+            limits:
+              memory: "256Mi"
+              cpu: "500m"

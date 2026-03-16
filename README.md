@@ -11,6 +11,7 @@ Repo hosting the Model Context Protocol Server for troubleshooting OVN-Kubernete
   - [Offline Mode](#offline-mode)
   - [Dual Mode](#dual-mode)
   - [Local development](#local-development)
+  - [Kubernetes deployment](#kubernetes-deployment)
 - [Tools available in MCP Server](#tools-available-in-mcp-server)
   - [Live Cluster Mode](#live-cluster-mode-1)
   - [Offline Mode](#offline-mode-1)
@@ -39,8 +40,9 @@ The server currently supports 2 transport modes: `stdio` and `http`.
 |--------|---------------------------------|-------------|
 | `--mode` | `live-cluster`                  | Server mode: `live-cluster`, `offline`, or `dual`. |
 | `--transport` | `stdio`                         | Transport: `stdio` or `http`. |
+| `--host` | `localhost`                     | Address the HTTP server binds to (`http` only). Use `0.0.0.0` in a container so clients can reach the listener. |
 | `--port` | `8080`                          | Port for HTTP transport. |
-| `--kubeconfig` | (none)                          | Path to kubeconfig file. Required for `live-cluster` and `dual`. |
+| `--kubeconfig` | (none)                          | Path to kubeconfig file. Omit when using in-cluster **ServiceAccount** credentials (for example the pod deployment); otherwise set for `live-cluster` and `dual`. |
 | `--pwru-image` | `docker.io/cilium/pwru:v1.0.10` | Container image for the **pwru** network tool (kernel packet tracing). |
 | `--tcpdump-image` | `nicolaka/netshoot:v0.15`       | Container image for the **tcpdump** network tool (packet capture). |
 | `--kernel-image` | `nicolaka/netshoot:v0.15`       | Container image for kernel tools (conntrack, ip, iptables, nft). |
@@ -177,6 +179,74 @@ When developing or building locally, run `make build` and use the binary path as
 ```
 
 For `offline` mode, omit the `--kubeconfig` argument in dual examples above.
+
+### Kubernetes deployment
+
+The manifests under [`config/`](config/) run the server **in the cluster** as HTTP ([`config/deployment.yaml`](config/deployment.yaml)): `--transport=http`, `--host=0.0.0.0`, `--port=8080`, and `--mode=live-cluster`. There is **no** `--kubeconfig` argument in that deployment; the pod uses its **ServiceAccount** credentials to connect to the Kubernetes API server.
+
+Apply the manifests with:
+
+```shell
+make deploy-ovnk-mcp-k8s IMAGE=<your-registry>/ovnk-mcp-server:<tag>
+```
+
+`IMAGE` is optional if the image already matches what the manifests expect. Remove the stack with `make undeploy-ovnk-mcp-k8s`.
+
+**Service:** a `ClusterIP` Service `ovnk-mcp-server` in namespace `ovn-kubernetes-mcp` exposes port **8080** to the pod ([`config/service.yaml`](config/service.yaml)).
+
+**NetworkPolicy:** [`config/networkpolicy.yaml`](config/networkpolicy.yaml) selects the MCP server pod and sets **`ingress: []`**, which denies **all** ingress to that pod from the cluster network. So other workloads cannot reach the MCP HTTP endpoint through the Service, and there is no in-manifest Ingress or LoadBalancer for public access.
+
+**Connecting an LLM client (Cursor, Claude, and so on) from your machine:** the usual pattern is to use **`kubectl port-forward`** from a kube context that can access the cluster. That forwards a local port to the Service without relying on in-cluster ingress to the pod (the forward is set up by the kubelet). In one terminal:
+
+```shell
+kubectl port-forward -n ovn-kubernetes-mcp svc/ovnk-mcp-server 8080:8080
+```
+
+Then configure the host’s MCP client for **streamable HTTP** against the forwarded port (same shape as [HTTP live-cluster](#live-cluster-mode) above):
+
+```json
+{
+  "mcpServers": {
+    "ovn-kubernetes": {
+      "url": "http://127.0.0.1:8080"
+    }
+  }
+}
+```
+
+Keep the port-forward process running while you use the tools. The server URL is the **base** of the HTTP transport; clients that implement [MCP Streamable HTTP](https://modelcontextprotocol.io/specification/2025-06-18/basic/transports) negotiate on top of that.
+
+**Security note:** the shipped manifests do not add TLS or application-level auth on the MCP HTTP listener. Treat network access as sensitive: use port-forward or private networking, and rely on Kubernetes RBAC (who may port-forward or change `NetworkPolicy`) to limit who can reach the server.
+
+**Allowing only a trusted in-cluster pod:** leave [`config/networkpolicy.yaml`](config/networkpolicy.yaml) in place. For a pod that is allowed to talk to the MCP server (for example a single well-known automation or gateway workload), add a **second** `NetworkPolicy` in namespace `ovn-kubernetes-mcp`. Policies that select the same pod are [additive](https://kubernetes.io/docs/concepts/services-networking/network-policies/): allowed ingress is the **union** of every matching policy’s `ingress` rules, so the deny-all policy keeps every other source blocked while your new policy explicitly permits the trusted peer on port **8080** only.
+
+1. Give the trusted client pod a **narrow, unique** label (example below uses `app.kubernetes.io/name: ovnk-mcp-trusted-client`).
+2. Apply a policy that uses the **same** `podSelector` as the shipped policy (MCP server labels: `app.kubernetes.io/name: ovn-kubernetes-mcp` and `app.kubernetes.io/component: mcp-server`) and an `ingress` rule whose `from` matches only that client, with `ports` limited to `8080` / `TCP`.
+
+```yaml
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: ovnk-mcp-server-allow-trusted-client
+  namespace: ovn-kubernetes-mcp
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: ovn-kubernetes-mcp
+      app.kubernetes.io/component: mcp-server
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: ovnk-mcp-trusted-client
+      ports:
+        - port: 8080
+          protocol: TCP
+```
+
+From that client pod, call the Service at `http://ovnk-mcp-server.ovn-kubernetes-mcp.svc:8080` (or the fully qualified `*.svc.cluster.local` name). If the client runs in **another** namespace, use a `from` entry with both `namespaceSelector` and `podSelector` as described under [Targeting multiple namespaces by label](https://kubernetes.io/docs/concepts/services-networking/network-policies/#targeting-multiple-namespaces-by-label). Prefer explicit labels over wide selectors, and keep trusting this path only for workloads you control—there is still no MCP-level authentication on the wire.
 
 ---
 

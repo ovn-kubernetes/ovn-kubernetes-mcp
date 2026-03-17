@@ -15,6 +15,7 @@ const (
 
 type MCPInspector struct {
 	command      string
+	serverURL    string // when set gets priority over command, connect via HTTP
 	methodType   string
 	toolName     string
 	toolArgs     map[string]any
@@ -27,6 +28,13 @@ func NewMCPInspector() *MCPInspector {
 
 func (i *MCPInspector) Command(cmd string) *MCPInspector {
 	i.command = cmd
+	return i
+}
+
+// URL configures the inspector to connect to an MCP server over HTTP at the given URL
+// (e.g. http://127.0.0.1:18080 when using port-forward to a deployed server).
+func (i *MCPInspector) URL(url string) *MCPInspector {
+	i.serverURL = url
 	return i
 }
 
@@ -48,8 +56,8 @@ func (i *MCPInspector) MethodCall(toolName string, toolArgs map[string]any) *MCP
 }
 
 func (i *MCPInspector) Execute() ([]byte, error) {
-	if i.command == "" {
-		return nil, fmt.Errorf("command is required")
+	if i.command == "" && i.serverURL == "" {
+		return nil, fmt.Errorf("command or server URL is required")
 	}
 	if i.methodType == "" {
 		return nil, fmt.Errorf("method is required")
@@ -84,7 +92,12 @@ func (i *MCPInspector) getCmdArgs() (string, []string, error) {
 		"@modelcontextprotocol/inspector",
 		"--cli",
 	}
-	args = append(args, i.command)
+	if i.serverURL != "" {
+		args = append(args, i.serverURL)
+		args = append(args, "--transport", "http")
+	} else {
+		args = append(args, i.command)
+	}
 	args = append(args, "--method")
 	args = append(args, i.methodType)
 	if i.methodType == string(MethodTypeCall) {
@@ -116,7 +129,8 @@ func (i *MCPInspector) getCmdArgs() (string, []string, error) {
 		}
 	}
 
-	if len(i.commandflags) > 0 {
+	// Command flags (e.g. --kubeconfig) only apply when running the server as a subprocess
+	if i.serverURL == "" && len(i.commandflags) > 0 {
 		args = append(args, "--")
 		for key, value := range i.commandflags {
 			args = append(args, fmt.Sprintf("--%s", key))

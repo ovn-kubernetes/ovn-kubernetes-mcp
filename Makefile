@@ -1,8 +1,9 @@
 # Get the Git repository root directory
-GIT_ROOT := $(shell git rev-parse --show-toplevel)
+export GIT_ROOT := $(shell git rev-parse --show-toplevel)
 
 export MCP_SERVER_PATH := $(GIT_ROOT)/_output/ovnk-mcp-server
-export KUBECONFIG := $(HOME)/ovn.conf
+KUBECONFIG ?= $(HOME)/ovn.conf
+export KUBECONFIG
 
 # CONTAINER_RUNNABLE determines if the tests can be run inside a container. It checks to see if
 # podman/docker is installed on the system.
@@ -13,6 +14,8 @@ else
 CONTAINER_RUNTIME?=docker
 endif
 CONTAINER_RUNNABLE ?= $(shell $(CONTAINER_RUNTIME) -v > /dev/null 2>&1; echo $$?)
+
+export CONTAINER_RUNTIME
 
 GOPATH ?= $(shell go env GOPATH)
 

@@ -36,6 +36,7 @@ import (
 
 const (
 	mcpServerPathEnvVar = "MCP_SERVER_PATH"
+	mcpServerURLEnvVar  = "MCP_SERVER_URL" // when set (live-cluster), connect via HTTP to deployed server
 	kubeconfigEnvVar    = "KUBECONFIG"
 	mcpModeEnvVar       = "MCP_MODE"
 	mcpModeOffline      = "offline"
@@ -90,13 +91,12 @@ func TestE2e(t *testing.T) {
 }
 
 var _ = BeforeSuite(func() {
-	mcpServerPath := os.Getenv(mcpServerPathEnvVar)
-	Expect(mcpServerPath).NotTo(BeEmpty())
-
 	mcpMode := os.Getenv(mcpModeEnvVar)
 	Expect(mcpMode).NotTo(BeEmpty())
 	if mcpMode == mcpModeOffline {
 		// Offline mode - configure MCP inspector without kubeconfig
+		mcpServerPath := os.Getenv(mcpServerPathEnvVar)
+		Expect(mcpServerPath).NotTo(BeEmpty())
 		mcpInspector = inspector.NewMCPInspector().
 			Command(mcpServerPath).
 			CommandFlags(map[string]string{
@@ -105,6 +105,7 @@ var _ = BeforeSuite(func() {
 		return
 	}
 
+	// Live-cluster mode
 	kubeconfig := os.Getenv(kubeconfigEnvVar)
 	Expect(kubeconfig).NotTo(BeEmpty())
 
@@ -115,6 +116,16 @@ var _ = BeforeSuite(func() {
 
 	k8se2eframework.TestContext.KubeConfig = kubeconfig
 
+	mcpServerURL := os.Getenv(mcpServerURLEnvVar)
+	if mcpServerURL != "" {
+		// Connect to MCP server over HTTP (e.g. port-forward to deployment from Dockerfile + k8s manifests)
+		mcpInspector = inspector.NewMCPInspector().URL(mcpServerURL)
+		return
+	}
+
+	// Run MCP server as local binary with kubeconfig
+	mcpServerPath := os.Getenv(mcpServerPathEnvVar)
+	Expect(mcpServerPath).NotTo(BeEmpty())
 	mcpInspector = inspector.NewMCPInspector().
 		Command(mcpServerPath).
 		CommandFlags(map[string]string{

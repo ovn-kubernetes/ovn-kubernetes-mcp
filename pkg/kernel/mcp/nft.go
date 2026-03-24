@@ -21,6 +21,9 @@ func (s *MCPServer) GetNFT(ctx context.Context, req *mcp.CallToolRequest, in typ
 	if err := validateNFTCommand(in.Command); err != nil {
 		return nil, types.Result{}, fmt.Errorf("error while getting nft data: %w", err)
 	}
+	if err := validateParameters(in.AddressFamilies); err != nil {
+		return nil, types.Result{}, fmt.Errorf("error while getting nft data: %w", err)
+	}
 	if err := validateNFTAddressFamily(in.AddressFamilies); err != nil {
 		return nil, types.Result{}, fmt.Errorf("error while getting nft data: %w", err)
 	}

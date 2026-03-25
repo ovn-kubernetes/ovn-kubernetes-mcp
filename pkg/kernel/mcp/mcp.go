@@ -161,8 +161,7 @@ default via 10.0.0.254 dev br-ex proto dhcp src 10.0.0.10 metric 48 				`,
 
 // executeCommand executes a command on a node via kubectl debug
 func (s *MCPServer) executeCommand(ctx context.Context, req *mcp.CallToolRequest, node string, command []string) (string, error) {
-	chrootCommand := append([]string{"chroot", "/host"}, command...)
-	debugParameter := k8stypes.DebugNodeParams{Name: node, Image: s.cfg.Image, Command: chrootCommand}
+	debugParameter := k8stypes.DebugNodeParams{Name: node, Image: s.cfg.Image, Command: command}
 	_, result, err := s.k8sMcpServer.DebugNode(ctx, req, debugParameter)
 	if err != nil {
 		return "", fmt.Errorf("error while establishing tty connection to the node: %w", err)

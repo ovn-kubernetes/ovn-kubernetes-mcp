@@ -54,7 +54,7 @@ func (cb *commandBuilder) build() []string {
 
 // utilityExists checks if a utility/command exists in the container
 func (s *MCPServer) utilityExists(ctx context.Context, req *mcp.CallToolRequest, node, utility string) error {
-	cmd := newCommand("chroot", "/host", utility, "-V")
+	cmd := newCommand(utility, "-V")
 	debugParameter := k8stypes.DebugNodeParams{Name: node, Image: s.cfg.Image, Command: cmd.build()}
 	_, result, err := s.k8sMcpServer.DebugNode(ctx, req, debugParameter)
 	if err != nil {

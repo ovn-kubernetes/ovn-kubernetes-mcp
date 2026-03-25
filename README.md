@@ -35,15 +35,15 @@ The server currently supports 2 transport modes: `stdio` and `http`.
 
 ### Command-line options
 
-| Option | Default | Description |
-|--------|---------|-------------|
-| `--mode` | `live-cluster` | Server mode: `live-cluster`, `offline`, or `dual`. |
-| `--transport` | `stdio` | Transport: `stdio` or `http`. |
-| `--port` | `8080` | Port for HTTP transport. |
-| `--kubeconfig` | (none) | Path to kubeconfig file. Required for `live-cluster` and `dual`. |
+| Option | Default                         | Description |
+|--------|---------------------------------|-------------|
+| `--mode` | `live-cluster`                  | Server mode: `live-cluster`, `offline`, or `dual`. |
+| `--transport` | `stdio`                         | Transport: `stdio` or `http`. |
+| `--port` | `8080`                          | Port for HTTP transport. |
+| `--kubeconfig` | (none)                          | Path to kubeconfig file. Required for `live-cluster` and `dual`. |
 | `--pwru-image` | `docker.io/cilium/pwru:v1.0.10` | Container image for the **pwru** network tool (kernel packet tracing). |
-| `--tcpdump-image` | `nicolaka/netshoot:v0.13` | Container image for the **tcpdump** network tool (packet capture). |
-| `--kernel-image` | `nicolaka/netshoot:v0.13` | Container image for kernel tools (conntrack, ip, iptables, nft). |
+| `--tcpdump-image` | `nicolaka/netshoot:v0.15`       | Container image for the **tcpdump** network tool (packet capture). |
+| `--kernel-image` | `nicolaka/netshoot:v0.15`       | Container image for kernel tools (conntrack, ip, iptables, nft). |
 
 ### Live Cluster Mode
 

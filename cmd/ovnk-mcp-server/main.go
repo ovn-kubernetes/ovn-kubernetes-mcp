@@ -20,6 +20,8 @@ import (
 	sosreportmcp "github.com/ovn-kubernetes/ovn-kubernetes-mcp/pkg/sosreport/mcp"
 )
 
+const defaultNetshootImage = "nicolaka/netshoot:v0.15"
+
 type MCPServerConfig struct {
 	Mode         string
 	Transport    string
@@ -149,8 +151,8 @@ func parseFlags() *MCPServerConfig {
 	flag.StringVar(&cfg.Port, "port", "8080", "Port to use")
 	flag.StringVar(&cfg.Kubernetes.Kubeconfig, "kubeconfig", "", "Path to the kubeconfig file")
 	flag.StringVar(&cfg.PwruImage, "pwru-image", "docker.io/cilium/pwru:v1.0.10", "Container image for pwru operations")
-	flag.StringVar(&cfg.TcpdumpImage, "tcpdump-image", "nicolaka/netshoot:v0.13", "Container image for tcpdump operations")
-	flag.StringVar(&cfg.Kernel.Image, "kernel-image", "nicolaka/netshoot:v0.13", "Container image for kernel operations")
+	flag.StringVar(&cfg.TcpdumpImage, "tcpdump-image", defaultNetshootImage, "Container image for tcpdump operations")
+	flag.StringVar(&cfg.Kernel.Image, "kernel-image", defaultNetshootImage, "Container image for kernel operations")
 	flag.Parse()
 	return cfg
 }

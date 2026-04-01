@@ -35,7 +35,7 @@ func (s *MCPServer) AddTools(server *mcp.Server) {
 	mcp.AddTool(server,
 		&mcp.Tool{
 			Name: "get-conntrack",
-			Description: `get-conntrack allows to interact with the connection tracking system of a Kubernetes node.
+			Description: fmt.Sprintf(`get-conntrack allows to interact with the connection tracking system of a Kubernetes node.
 			              Use this command to discover a list of all (or a filtered selection of) currently tracked connections.
 Parameters:
 - node (required): Name of the node from where conntrack entries are expected to be extracted
@@ -49,7 +49,10 @@ Parameters:
 						-p, --proto PROTO                : Specify layer four (TCP, UDP, ...) protocol.
 						--sport, --orig-port-src PORT    : Source port in original direction.
 						--dport, --orig-port-dst PORT    : Destination port in original direction.
-- max_lines (optional): Limit the number of lines in output
+- head (optional): Return only first N lines. Default: %d lines if tail is not specified
+- tail (optional): Return only last N lines
+- apply_tail_first (optional): If both head and tail are set and apply_tail_first is true,
+apply tail before head. Default: false
 
 Example:
 - node='ovn-control-plane', command='-L'
@@ -57,13 +60,13 @@ Example:
 
 Example output:
 tcp 6 91 ESTABLISHED src=1.2.3.4 dst=5.6.7.8 sport=32000 dport=10250 src=5.6.7.8 dst=1.2.3.4  sport=10250 dport=32000 [ASSURED] mark=0 secctx=system_u:object_r:unlabeled_t:s0 use=2
-`,
+`, defaultMaxOutputLines),
 		}, s.GetConntrack)
 	// get-iptables tool registration
 	mcp.AddTool(server,
 		&mcp.Tool{
 			Name: "get-iptables",
-			Description: `get-iptables allows to interact with kernel to list packet filter rules.
+			Description: fmt.Sprintf(`get-iptables allows to interact with kernel to list packet filter rules.
 			              Iptables and ip6tables are used to inspect the tables of IPv4 and IPv6 packet filter rules in the Linux kernel.
 Parameters:
 - node (required): Name of the node from where packet filter rules are expected to be extracted
@@ -84,7 +87,10 @@ Parameters:
 								-p, --protocol protocol          : The protocol of the rule or of the packet to check.
 								-4, --ipv4                       : IPv4
 								-6, --ipv6                       : IPv6
-- max_lines (optional): Limit the number of lines in output
+- head (optional): Return only first N lines. Default: %d lines if tail is not specified
+- tail (optional): Return only last N lines
+- apply_tail_first (optional): If both head and tail are set and apply_tail_first is true,
+apply tail before head. Default: false
 							
 Example:
 - node='ovn-control-plane', table='nat', command='-L', filter_parameters='-nv4'	
@@ -92,13 +98,13 @@ Example output:
 Chain POSTROUTING (policy ACCEPT 675K packets, 41M bytes)
  pkts bytes target     prot opt in     out     source               destination         
  675K   41M OVN-KUBE-EGRESS-IP-MULTI-NIC  all  --  *      *       0.0.0.0/0            0.0.0.0/0     							
-`,
+`, defaultMaxOutputLines),
 		}, s.GetIptables)
 	// get-nft tool registration
 	mcp.AddTool(server,
 		&mcp.Tool{
 			Name: "get-nft",
-			Description: `get-nft allows to interact with kernel to list packet filtering and classification rules.
+			Description: fmt.Sprintf(`get-nft allows to interact with kernel to list packet filtering and classification rules.
 Parameters:
 - node (required): Name of the node from where packet filtering and classification rules are expected to be extracted
 - command (required): These options specify the desired action to perform. Only one of them can be specified on the command line unless otherwise stated below.
@@ -116,19 +122,22 @@ Parameters:
                                - arp      ARP address family, handling IPv4 ARP packets.
                                - bridge   Bridge address family, handling packets which traverse a bridge device.
                                - netdev   Netdev address family, handling packets on ingress and egress.
-- max_lines (optional): Limit the number of lines in output
+- head (optional): Return only first N lines. Default: %d lines if tail is not specified
+- tail (optional): Return only last N lines
+- apply_tail_first (optional): If both head and tail are set and apply_tail_first is true,
+apply tail before head. Default: false
 					
 Example:
 - node='ovn-control-plane', command='list tables', address_families='inet'
 Example output:
 table inet ovn-kubernetes
-				`,
+				`, defaultMaxOutputLines),
 		}, s.GetNFT)
 	// get-ip tool registration
 	mcp.AddTool(server,
 		&mcp.Tool{
 			Name: "get-ip",
-			Description: `get-ip allows to interact with kernel to list routing, network devices, interfaces.
+			Description: fmt.Sprintf(`get-ip allows to interact with kernel to list routing, network devices, interfaces.
 Parameters:
 - node (required): Name of the node on which ip command is expected to be executed
 - options (optional): These options helps in providing more details or formattig output data.
@@ -150,12 +159,15 @@ Parameters:
 					  - xfrm policy list : show Security Policy Database.
 - filter_parameters (optional): This allows to mention sub command to get more filtered data. Available sub command varies and supportability depends on what is 
                           already supported with 'ip' utility.
-- max_lines (optional): Limit the number of lines in output
+- head (optional): Return only first N lines. Default: %d lines if tail is not specified
+- tail (optional): Return only last N lines
+- apply_tail_first (optional): If both head and tail are set and apply_tail_first is true,
+apply tail before head. Default: false
 
 Example:
 - node='ovn-control-plane', options="-4", command='route show', filter_parameters='table all'
 Example output:
-default via 10.0.0.254 dev br-ex proto dhcp src 10.0.0.10 metric 48 				`,
+default via 10.0.0.254 dev br-ex proto dhcp src 10.0.0.10 metric 48`, defaultMaxOutputLines),
 		}, s.GetIPCommandOutput)
 }
 

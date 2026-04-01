@@ -8,6 +8,7 @@ import (
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"github.com/ovn-kubernetes/ovn-kubernetes-mcp/pkg/kernel/types"
+	"github.com/ovn-kubernetes/ovn-kubernetes-mcp/pkg/utils"
 )
 
 // GetIPCommandOutput MCP handler for ip utility operations.
@@ -22,27 +23,23 @@ func (s *MCPServer) GetIPCommandOutput(ctx context.Context, req *mcp.CallToolReq
 	if err := validateIPCommand(in.Command); err != nil {
 		return nil, types.Result{}, fmt.Errorf("error while getting ip data: %w", err)
 	}
-	if in.FilterParameters != "" {
-		if err := validateParameters(in.FilterParameters); err != nil {
-			return nil, types.Result{}, fmt.Errorf("error while getting ip data: %w", err)
-		}
+	if err := utils.ValidateSafeString(in.FilterParameters, "filter parameters", true, utils.ShellMetaCharactersTypeDefault); err != nil {
+		return nil, types.Result{}, fmt.Errorf("error while getting ip data: %w", err)
 	}
-	if in.Options != "" {
-		if err := validateParameters(in.Options); err != nil {
-			return nil, types.Result{}, fmt.Errorf("error while getting ip data: %w", err)
-		}
+	if err := utils.ValidateSafeString(in.Options, "options", true, utils.ShellMetaCharactersTypeDefault); err != nil {
+		return nil, types.Result{}, fmt.Errorf("error while getting ip data: %w", err)
 	}
 
-	cmd := newCommand("ip")
-	cmd.addIfNotEmpty(in.Options, in.Options)
-	cmd.add(strings.Fields(in.Command)...)
-	cmd.addIfNotEmpty(in.FilterParameters, strings.Fields(in.FilterParameters)...)
+	cmd := utils.NewCommand("ip")
+	cmd.AddIfNotEmpty(in.Options, strings.Fields(in.Options)...)
+	cmd.Add(strings.Fields(in.Command)...)
+	cmd.AddIfNotEmpty(in.FilterParameters, strings.Fields(in.FilterParameters)...)
 
-	stdout, err := s.executeCommand(ctx, req, in.Node, cmd.build())
+	stdout, err := s.executeCommand(ctx, req, in.Node, cmd.Build())
 	if err != nil {
 		return nil, types.Result{}, fmt.Errorf("error while getting ip data: %w", err)
 	}
-	stdout = limitOutputLines(stdout, in.MaxLines)
+	stdout = strings.Join(in.HeadTailParams.Apply(strings.Split(stdout, "\n"), defaultMaxOutputLines), "\n")
 	return nil, types.Result{Data: stdout}, nil
 }
 

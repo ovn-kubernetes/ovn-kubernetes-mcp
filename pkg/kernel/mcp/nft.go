@@ -8,6 +8,7 @@ import (
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"github.com/ovn-kubernetes/ovn-kubernetes-mcp/pkg/kernel/types"
+	"github.com/ovn-kubernetes/ovn-kubernetes-mcp/pkg/utils"
 )
 
 // GetNFT MCP handler for nftables operations.
@@ -21,22 +22,30 @@ func (s *MCPServer) GetNFT(ctx context.Context, req *mcp.CallToolRequest, in typ
 	if err := validateNFTCommand(in.Command); err != nil {
 		return nil, types.Result{}, fmt.Errorf("error while getting nft data: %w", err)
 	}
-	if err := validateParameters(in.AddressFamilies); err != nil {
+	if err := utils.ValidateSafeString(in.AddressFamilies, "address families", true, utils.ShellMetaCharactersTypeDefault); err != nil {
 		return nil, types.Result{}, fmt.Errorf("error while getting nft data: %w", err)
 	}
 	if err := validateNFTAddressFamily(in.AddressFamilies); err != nil {
 		return nil, types.Result{}, fmt.Errorf("error while getting nft data: %w", err)
 	}
 
-	cmd := newCommand("nft")
-	cmd.add(strings.Fields(in.Command)...)
-	cmd.addIf(in.AddressFamilies != "", in.AddressFamilies)
+	command := strings.TrimSpace(in.Command)
+	addressFamilies := strings.TrimSpace(in.AddressFamilies)
+	cmd := utils.NewCommand("nft")
+	cmd.Add(strings.Fields(command)...)
+	cmd.AddIf(addressFamilies != "", addressFamilies)
 
-	stdout, err := s.executeCommand(ctx, req, in.Node, cmd.build())
+	stdout, err := s.executeCommand(ctx, req, in.Node, cmd.Build())
 	if err != nil {
 		return nil, types.Result{}, fmt.Errorf("error while getting nft data: %w", err)
 	}
-	stdout = limitOutputLines(stdout, in.MaxLines)
+
+	// Strip empty lines from the output
+	lines := utils.StripEmptyLines(strings.Split(stdout, "\n"))
+	// Apply the head and tail parameters to the lines
+	lines = in.HeadTailParams.Apply(lines, defaultMaxOutputLines)
+	// Join the lines back into a single string
+	stdout = strings.Join(lines, "\n")
 	return nil, types.Result{Data: stdout}, nil
 }
 

@@ -1,10 +1,12 @@
 package types
 
+import "github.com/ovn-kubernetes/ovn-kubernetes-mcp/pkg/utils"
+
 // CommonParams contains the common parameters required for executing kernel commands on a Kubernetes node.
 // These parameters are embedded in other specific parameter types.
 type CommonParams struct {
-	Node     string `json:"node"`                // Node is the name of the Kubernetes node where the command will be executed
-	MaxLines int    `json:"max_lines,omitempty"` // Limit the number of lines in output
+	Node string `json:"node"` // Node is the name of the Kubernetes node where the command will be executed
+	utils.HeadTailParams
 }
 
 // ListConntrackParams contains parameters for listing connection tracking entries using conntrack command.

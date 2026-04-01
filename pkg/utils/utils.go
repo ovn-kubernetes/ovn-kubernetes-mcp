@@ -125,7 +125,7 @@ func ValidateSafeString(value, fieldName string, allowEmpty bool, shellMetaChara
 	return nil
 }
 
-// ValidatePath validates that a path is safe to use for mounting.
+// ValidatePath validates that a path is safe to use as a filesystem path.
 // It ensures the path:
 // - Is absolute (starts with /)
 // - Does not contain path traversal patterns (..)

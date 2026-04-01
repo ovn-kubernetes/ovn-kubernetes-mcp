@@ -3,59 +3,22 @@ package mcp
 import (
 	"context"
 	"fmt"
-	"regexp"
 	"strings"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	k8stypes "github.com/ovn-kubernetes/ovn-kubernetes-mcp/pkg/kubernetes/types"
+	"github.com/ovn-kubernetes/ovn-kubernetes-mcp/pkg/utils"
 )
 
 const (
-	// MaxOutputLines defines the maximum number of lines to return from command output
-	MaxOutputLines = 100
+	// defaultMaxOutputLines defines the maximum number of lines to return from command output
+	defaultMaxOutputLines = 100
 )
-
-// commandBuilder helps build commands with a fluent interface
-type commandBuilder struct {
-	args []string
-}
-
-// newCommand creates a new command builder with the base command
-func newCommand(baseCmd ...string) *commandBuilder {
-	return &commandBuilder{args: baseCmd}
-}
-
-// add adds arguments to the command
-func (cb *commandBuilder) add(args ...string) *commandBuilder {
-	cb.args = append(cb.args, args...)
-	return cb
-}
-
-// addIf adds arguments to the command only if the condition is true
-func (cb *commandBuilder) addIf(condition bool, args ...string) *commandBuilder {
-	if condition {
-		cb.args = append(cb.args, args...)
-	}
-	return cb
-}
-
-// addIfNotEmpty adds arguments to the command only if the value is not empty
-func (cb *commandBuilder) addIfNotEmpty(value string, args ...string) *commandBuilder {
-	if value != "" {
-		cb.args = append(cb.args, args...)
-	}
-	return cb
-}
-
-// build returns the final command slice
-func (cb *commandBuilder) build() []string {
-	return cb.args
-}
 
 // utilityExists checks if a utility/command exists in the container
 func (s *MCPServer) utilityExists(ctx context.Context, req *mcp.CallToolRequest, node, utility string) error {
-	cmd := newCommand(utility, "-V")
-	debugParameter := k8stypes.DebugNodeParams{Name: node, Image: s.cfg.Image, Command: cmd.build()}
+	cmd := utils.NewCommand(utility, "-V")
+	debugParameter := k8stypes.DebugNodeParams{Name: node, Image: s.cfg.Image, Command: cmd.Build()}
 	_, result, err := s.k8sMcpServer.DebugNode(ctx, req, debugParameter)
 	if err != nil {
 		return fmt.Errorf("error while checking availability of the utility %s: %w", utility, err)
@@ -83,37 +46,4 @@ func filterWarnings(output string) string {
 	}
 
 	return strings.Join(filteredLines, "\n")
-}
-
-// limitOutputLines limits the output to a maximum number of lines.
-// If the output exceeds the maximum, it truncates and adds a message indicating truncation.
-func limitOutputLines(output string, maxLines int) string {
-	if output == "" {
-		return output
-	}
-	if maxLines <= 0 {
-		maxLines = MaxOutputLines
-	}
-
-	lines := strings.Split(output, "\n")
-	if len(lines) <= maxLines {
-		return output
-	}
-
-	// Truncate to maxLines and add a truncation message
-	truncatedLines := lines[:maxLines]
-	truncatedLines = append(truncatedLines, fmt.Sprintf("\n... Output truncated. Showing first %d lines out of %d total lines.", maxLines, len(lines)))
-
-	return strings.Join(truncatedLines, "\n")
-}
-
-// validateParameters validates whether any parameter contains shell
-// metacharacters or not. It returns an error if there are any.
-func validateParameters(param string) error {
-	shellMetacharacters := regexp.MustCompile(`[;&|$` + "`" + `<>\\()]`)
-	if shellMetacharacters.MatchString(param) {
-		return fmt.Errorf("invalid use of metacharacters in parameter: %s", param)
-	}
-
-	return nil
 }

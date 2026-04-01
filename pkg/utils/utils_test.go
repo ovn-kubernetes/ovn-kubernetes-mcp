@@ -199,6 +199,12 @@ func TestValidateShellMetacharacters(t *testing.T) {
 			shellMetaCharactersType: ShellMetaCharactersTypeDefault,
 			wantError:               true,
 		},
+		{
+			name:                    "invalid with dollar sign",
+			param:                   "$(subshell)",
+			shellMetaCharactersType: ShellMetaCharactersTypeDisallowSpecialCharacters,
+			wantError:               true,
+		},
 	}
 
 	for _, tt := range tests {

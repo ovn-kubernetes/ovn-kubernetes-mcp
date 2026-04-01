@@ -1,7 +1,6 @@
 package mcp
 
 import (
-	"slices"
 	"strings"
 	"testing"
 )
@@ -94,49 +93,6 @@ func TestValidateIntMax(t *testing.T) {
 			err := validateIntMax(tt.value, tt.max, tt.fieldName, tt.unit)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("validateIntMax() error = %v, wantErr %v", err, tt.wantErr)
-			}
-		})
-	}
-}
-
-func TestStringWithDefault(t *testing.T) {
-	tests := []struct {
-		name         string
-		value        string
-		defaultValue string
-		want         string
-	}{
-		{
-			name:         "empty value returns default",
-			value:        "",
-			defaultValue: "text",
-			want:         "text",
-		},
-		{
-			name:         "non-empty value returns value",
-			value:        "pcap",
-			defaultValue: "text",
-			want:         "pcap",
-		},
-		{
-			name:         "both empty returns empty",
-			value:        "",
-			defaultValue: "",
-			want:         "",
-		},
-		{
-			name:         "whitespace value returns value",
-			value:        " ",
-			defaultValue: "text",
-			want:         " ",
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got := stringWithDefault(tt.value, tt.defaultValue)
-			if got != tt.want {
-				t.Errorf("stringWithDefault() = %v, want %v", got, tt.want)
 			}
 		})
 	}
@@ -483,85 +439,6 @@ func TestValidatePacketFilter(t *testing.T) {
 			err := validatePacketFilter(tt.filter)
 			if (err != nil) != tt.wantError {
 				t.Errorf("validatePacketFilter(%q) error = %v, wantError %v", tt.filter, err, tt.wantError)
-			}
-		})
-	}
-}
-
-func TestCommandBuilder(t *testing.T) {
-	tests := []struct {
-		name    string
-		builder func() *commandBuilder
-		want    []string
-	}{
-		{
-			name: "simple command",
-			builder: func() *commandBuilder {
-				return newCommand("tcpdump")
-			},
-			want: []string{"tcpdump"},
-		},
-		{
-			name: "command with args",
-			builder: func() *commandBuilder {
-				return newCommand("tcpdump").add("-i", "eth0")
-			},
-			want: []string{"tcpdump", "-i", "eth0"},
-		},
-		{
-			name: "command with conditional args true",
-			builder: func() *commandBuilder {
-				return newCommand("tcpdump").addIf(true, "-v")
-			},
-			want: []string{"tcpdump", "-v"},
-		},
-		{
-			name: "command with conditional args false",
-			builder: func() *commandBuilder {
-				return newCommand("tcpdump").addIf(false, "-v")
-			},
-			want: []string{"tcpdump"},
-		},
-		{
-			name: "command with addIfNotEmpty with value",
-			builder: func() *commandBuilder {
-				return newCommand("tcpdump").addIfNotEmpty("tcp port 80", "tcp port 80")
-			},
-			want: []string{"tcpdump", "tcp port 80"},
-		},
-		{
-			name: "command with addIfNotEmpty without value",
-			builder: func() *commandBuilder {
-				return newCommand("tcpdump").addIfNotEmpty("", "-f")
-			},
-			want: []string{"tcpdump"},
-		},
-		{
-			name: "command with chained operations",
-			builder: func() *commandBuilder {
-				return newCommand("tcpdump").
-					add("-i", "eth0").
-					addIf(true, "-n").
-					addIf(false, "-v").
-					addIfNotEmpty("tcp", "tcp").
-					addIfNotEmpty("", "-x")
-			},
-			want: []string{"tcpdump", "-i", "eth0", "-n", "tcp"},
-		},
-		{
-			name: "command with multiple base args",
-			builder: func() *commandBuilder {
-				return newCommand("timeout", "30s", "retis")
-			},
-			want: []string{"timeout", "30s", "retis"},
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got := tt.builder().build()
-			if !slices.Equal(got, tt.want) {
-				t.Errorf("commandBuilder.build() = %v, want %v", got, tt.want)
 			}
 		})
 	}

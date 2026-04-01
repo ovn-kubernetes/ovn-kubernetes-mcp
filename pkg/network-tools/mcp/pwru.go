@@ -7,6 +7,7 @@ import (
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	k8stypes "github.com/ovn-kubernetes/ovn-kubernetes-mcp/pkg/kubernetes/types"
 	"github.com/ovn-kubernetes/ovn-kubernetes-mcp/pkg/network-tools/types"
+	"github.com/ovn-kubernetes/ovn-kubernetes-mcp/pkg/utils"
 )
 
 const (
@@ -30,16 +31,16 @@ func (s *MCPServer) Pwru(ctx context.Context, req *mcp.CallToolRequest, in types
 		return nil, types.CommandResult{}, err
 	}
 
-	cmd := newCommand("pwru", "--output-limit-lines", strconv.Itoa(outputLimitLines))
+	cmd := utils.NewCommand("pwru", "--output-limit-lines", strconv.Itoa(outputLimitLines))
 	// pwru accepts pcap filter as positional argument(s)
-	cmd.addIfNotEmpty(in.BPFFilter, in.BPFFilter)
+	cmd.AddIfNotEmpty(in.BPFFilter, in.BPFFilter)
 
 	target := k8stypes.DebugNodeParams{
 		Name:      in.NodeName,
 		Image:     s.pwruImage,
 		HostPath:  "/sys/kernel/debug",
 		MountPath: "/sys/kernel/debug",
-		Command:   cmd.build(),
+		Command:   cmd.Build(),
 	}
 
 	result, err := s.runDebugNode(ctx, req, target)

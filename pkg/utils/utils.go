@@ -18,6 +18,10 @@ var (
 	// shellMetaCharactersNoBracketsNoAmp is like shellMetaCharactersNoBrackets but allows & for
 	// commands which use && for logical AND operations.
 	shellMetaCharactersNoBracketsNoAmp = regexp.MustCompile(`[;|$` + "`" + `<>\\]`)
+
+	// shellMetaCharactersNoBracketsSpecialCharacters is like shellMetaCharactersNoBrackets but also
+	// disallows newline, NUL byte, and single quote (').
+	shellMetaCharactersNoBracketsSpecialCharacters = regexp.MustCompile(`[;&|$` + "`" + `\n\x00` + `'<>\\]`)
 )
 
 // ShellMetaCharactersType is the type of shell metacharacters to validate.
@@ -25,9 +29,10 @@ type ShellMetaCharactersType string
 
 // ShellMetaCharactersType values.
 const (
-	ShellMetaCharactersTypeDefault               ShellMetaCharactersType = "default"
-	ShellMetaCharactersTypeAllowBrackets         ShellMetaCharactersType = "allow_brackets"
-	ShellMetaCharactersTypeAllowBracketsAllowAmp ShellMetaCharactersType = "allow_brackets_and_amp"
+	ShellMetaCharactersTypeDefault                   ShellMetaCharactersType = "default"
+	ShellMetaCharactersTypeAllowBrackets             ShellMetaCharactersType = "allow_brackets"
+	ShellMetaCharactersTypeAllowBracketsAllowAmp     ShellMetaCharactersType = "allow_brackets_and_amp"
+	ShellMetaCharactersTypeDisallowSpecialCharacters ShellMetaCharactersType = "disallow_special_characters"
 )
 
 // StripEmptyLines strips empty lines from a slice of strings. It will return a new slice of strings
@@ -72,6 +77,8 @@ func GetGitRepositoryRoot() (string, error) {
 // If shellMetaCharactersType is ShellMetaCharactersTypeDefault, no shell metacharacters are allowed.
 // If shellMetaCharactersType is ShellMetaCharactersTypeAllowBracketsAllowAmp, the ( and ) characters and the & character are allowed.
 // If shellMetaCharactersType is ShellMetaCharactersTypeAllowBrackets, the ( and ) characters are allowed.
+// If shellMetaCharactersType is ShellMetaCharactersTypeDisallowSpecialCharacters, the new line, null byte,
+// and special characters are disallowed.
 func validateShellMetacharacters(param string, shellMetaCharactersType ShellMetaCharactersType) error {
 	switch shellMetaCharactersType {
 	case ShellMetaCharactersTypeAllowBracketsAllowAmp:
@@ -80,6 +87,10 @@ func validateShellMetacharacters(param string, shellMetaCharactersType ShellMeta
 		}
 	case ShellMetaCharactersTypeAllowBrackets:
 		if shellMetaCharactersNoBrackets.MatchString(param) {
+			return fmt.Errorf("invalid use of metacharacters in parameter: %s", param)
+		}
+	case ShellMetaCharactersTypeDisallowSpecialCharacters:
+		if shellMetaCharactersNoBracketsSpecialCharacters.MatchString(param) {
 			return fmt.Errorf("invalid use of metacharacters in parameter: %s", param)
 		}
 	case ShellMetaCharactersTypeDefault:

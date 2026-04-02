@@ -45,7 +45,7 @@ func setupLiveCluster(serverCfg *MCPServerConfig, server *mcp.Server) {
 	log.Println("Adding Kubernetes tools to OVN-K MCP server")
 	k8sMcpServer.AddTools(server)
 
-	ovnServer := ovnmcp.NewMCPServer(k8sMcpServer)
+	ovnServer := ovnmcp.NewMCPServer(k8sMcpServer.RunCommand)
 	log.Println("Adding OVN tools to OVN-K MCP server")
 	ovnServer.AddTools(server)
 

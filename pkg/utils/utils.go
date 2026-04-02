@@ -14,6 +14,10 @@ var (
 
 	// shellMetaCharactersNoBrackets is like shellMetaCharacters but allows brackets.
 	shellMetaCharactersNoBrackets = regexp.MustCompile(`[;&|$` + "`" + `<>\\]`)
+
+	// shellMetaCharactersNoBracketsNoAmp is like shellMetaCharactersNoBrackets but allows & for
+	// commands which use && for logical AND operations.
+	shellMetaCharactersNoBracketsNoAmp = regexp.MustCompile(`[;|$` + "`" + `<>\\]`)
 )
 
 // ShellMetaCharactersType is the type of shell metacharacters to validate.
@@ -21,8 +25,9 @@ type ShellMetaCharactersType string
 
 // ShellMetaCharactersType values.
 const (
-	ShellMetaCharactersTypeDefault       ShellMetaCharactersType = "default"
-	ShellMetaCharactersTypeAllowBrackets ShellMetaCharactersType = "allow_brackets"
+	ShellMetaCharactersTypeDefault               ShellMetaCharactersType = "default"
+	ShellMetaCharactersTypeAllowBrackets         ShellMetaCharactersType = "allow_brackets"
+	ShellMetaCharactersTypeAllowBracketsAllowAmp ShellMetaCharactersType = "allow_brackets_and_amp"
 )
 
 // StripEmptyLines strips empty lines from a slice of strings. It will return a new slice of strings
@@ -65,10 +70,14 @@ func GetGitRepositoryRoot() (string, error) {
 // validateShellMetacharacters validates whether the given parameter contains shell
 // metacharacters or not. It returns an error if there are any shell metacharacters.
 // If shellMetaCharactersType is ShellMetaCharactersTypeDefault, no shell metacharacters are allowed.
-// If shellMetaCharactersType is ShellMetaCharactersTypeAllowAmp, the & character is allowed.
+// If shellMetaCharactersType is ShellMetaCharactersTypeAllowBracketsAllowAmp, the ( and ) characters and the & character are allowed.
 // If shellMetaCharactersType is ShellMetaCharactersTypeAllowBrackets, the ( and ) characters are allowed.
 func validateShellMetacharacters(param string, shellMetaCharactersType ShellMetaCharactersType) error {
 	switch shellMetaCharactersType {
+	case ShellMetaCharactersTypeAllowBracketsAllowAmp:
+		if shellMetaCharactersNoBracketsNoAmp.MatchString(param) {
+			return fmt.Errorf("invalid use of metacharacters in parameter: %s", param)
+		}
 	case ShellMetaCharactersTypeAllowBrackets:
 		if shellMetaCharactersNoBrackets.MatchString(param) {
 			return fmt.Errorf("invalid use of metacharacters in parameter: %s", param)

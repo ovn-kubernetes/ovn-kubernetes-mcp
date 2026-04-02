@@ -334,7 +334,7 @@ func (s *MCPServer) DumpFlows(ctx context.Context, req *mcp.CallToolRequest,
 		}
 		flows := utils.StripEmptyLines(strings.Split(stdout, "\n"))
 		return flows, nil
-	})
+	}, true)
 	if err != nil {
 		return nil, result, err
 	}
@@ -380,7 +380,7 @@ func (s *MCPServer) DumpConntrack(ctx context.Context, req *mcp.CallToolRequest,
 		}
 		entries := utils.StripEmptyLines(strings.Split(stdout, "\n"))
 		return entries, nil
-	})
+	}, true)
 	if err != nil {
 		return nil, result, err
 	}
@@ -427,7 +427,7 @@ func (s *MCPServer) DumpOfprotoTrace(ctx context.Context, req *mcp.CallToolReque
 		}
 		lines := utils.StripEmptyLines(strings.Split(stdout, "\n"))
 		return lines, nil
-	})
+	}, true)
 	if err != nil {
 		return nil, result, err
 	}

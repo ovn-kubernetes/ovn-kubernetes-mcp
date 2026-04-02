@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	mcp "github.com/modelcontextprotocol/go-sdk/mcp"
 	kernelmcp "github.com/ovn-kubernetes/ovn-kubernetes-mcp/pkg/kernel/mcp"
@@ -30,6 +31,7 @@ type MCPServerConfig struct {
 	TcpdumpImage string
 	Kernel       kernelmcp.Config
 	Kubernetes   kubernetesmcp.Config
+	ToolTimeout  time.Duration
 }
 
 // setupLiveCluster sets up the live cluster mode.
@@ -80,6 +82,11 @@ func main() {
 		&mcp.Implementation{Name: "ovn-kubernetes"},
 		&mcp.ServerOptions{HasTools: true},
 	)
+
+	// Apply timeout middleware to all tool calls if configured.
+	if serverCfg.ToolTimeout > 0 {
+		ovnkMcpServer.AddReceivingMiddleware(toolTimeoutMiddleware(serverCfg.ToolTimeout))
+	}
 
 	// Setup the MCP server based on the mode.
 	switch serverCfg.Mode {
@@ -146,13 +153,72 @@ func main() {
 
 func parseFlags() *MCPServerConfig {
 	cfg := &MCPServerConfig{}
+	var timeoutSeconds int
+
 	flag.StringVar(&cfg.Mode, "mode", "live-cluster", "Mode of debugging: live-cluster or offline or dual")
 	flag.StringVar(&cfg.Transport, "transport", "stdio", "Transport to use: stdio or http")
 	flag.StringVar(&cfg.Port, "port", "8080", "Port to use")
 	flag.StringVar(&cfg.Kubernetes.Kubeconfig, "kubeconfig", "", "Path to the kubeconfig file")
 	flag.StringVar(&cfg.PwruImage, "pwru-image", "docker.io/cilium/pwru:v1.0.10", "Container image for pwru operations")
+
 	flag.StringVar(&cfg.TcpdumpImage, "tcpdump-image", defaultNetshootImage, "Container image for tcpdump operations")
 	flag.StringVar(&cfg.Kernel.Image, "kernel-image", defaultNetshootImage, "Container image for kernel operations")
+	flag.IntVar(&timeoutSeconds, "tool-timeout", 60, "Timeout in seconds for tool operations (0 to disable)")
 	flag.Parse()
+
+	// Convert timeout to duration and apply limits
+	if timeoutSeconds < 0 {
+		timeoutSeconds = 60
+	}
+
+	cfg.ToolTimeout = time.Duration(timeoutSeconds) * time.Second
+
+	if cfg.ToolTimeout == 0 {
+		log.Println("Tool timeout enforcement disabled")
+	} else {
+		log.Printf("Tool timeout: %v", cfg.ToolTimeout)
+	}
+
 	return cfg
+}
+
+// toolTimeoutMiddleware returns an MCP receiving middleware that applies a
+// context timeout to every tools/call request. This ensures all tool
+// operations have a bounded execution time without requiring per-tool code.
+// When a timeout occurs, the original error is replaced with a concise,
+// LLM-friendly message that signals the error is transient and retryable.
+func toolTimeoutMiddleware(timeout time.Duration) mcp.Middleware {
+	return func(next mcp.MethodHandler) mcp.MethodHandler {
+		return func(ctx context.Context, method string, req mcp.Request) (mcp.Result, error) {
+			if method != "tools/call" {
+				return next(ctx, method, req)
+			}
+
+			var cancel context.CancelFunc
+			ctx, cancel = context.WithTimeout(ctx, timeout)
+			defer cancel()
+
+			result, err := next(ctx, method, req)
+
+			// Only intercept if the deadline actually fired AND the handler
+			// did not return a successful result. This avoids masking a
+			// valid response that completed just before the deadline.
+			if ctx.Err() == context.DeadlineExceeded {
+				if toolResult, ok := result.(*mcp.CallToolResult); !ok || toolResult.IsError {
+					return &mcp.CallToolResult{
+						Content: []mcp.Content{&mcp.TextContent{
+							Text: fmt.Sprintf(
+								"TIMEOUT: tool operation exceeded the %v deadline. "+
+									"Consider using filters or limiting output lines. "+
+									"Retry at most once, if it fails again move on.",
+								timeout),
+						}},
+						IsError: true,
+					}, nil
+				}
+			}
+
+			return result, err
+		}
+	}
 }

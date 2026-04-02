@@ -43,3 +43,4 @@ func GetGitRepositoryRoot() (string, error) {
 		currentDir = parentDir
 	}
 }
+

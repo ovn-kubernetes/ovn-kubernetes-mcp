@@ -1,6 +1,7 @@
 package client
 
 import (
+	"context"
 	"fmt"
 	"testing"
 
@@ -65,7 +66,7 @@ func TestGetResource(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.testName, func(t *testing.T) {
 			fakeclient := NewFakeClient(test.object)
-			resource, err := fakeclient.GetResource(test.gvk.Group, test.gvk.Version, test.gvk.Kind, test.objectName, test.namespace)
+			resource, err := fakeclient.GetResource(context.Background(), test.gvk.Group, test.gvk.Version, test.gvk.Kind, test.objectName, test.namespace)
 			if (err != nil) != test.expectedErr {
 				t.Fatalf("Failed to get resource: %v", err)
 			}
@@ -366,7 +367,7 @@ func TestListResources(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.testName, func(t *testing.T) {
 			fakeclient := NewFakeClient(test.objects...)
-			resources, err := fakeclient.ListResources(test.gvk.Group, test.gvk.Version, test.gvk.Kind, test.namespace, test.labelSelector)
+			resources, err := fakeclient.ListResources(context.Background(), test.gvk.Group, test.gvk.Version, test.gvk.Kind, test.namespace, test.labelSelector)
 			if (err != nil) != test.expectedErr {
 				t.Fatalf("Failed to list resources: %v", err)
 			}

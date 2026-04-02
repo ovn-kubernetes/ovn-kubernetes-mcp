@@ -182,6 +182,12 @@ func TestValidateShellMetacharacters(t *testing.T) {
 			wantError:               false,
 		},
 		{
+			name:                    "valid with ampersand",
+			param:                   "test&background",
+			shellMetaCharactersType: ShellMetaCharactersTypeAllowAmp,
+			wantError:               false,
+		},
+		{
 			name:                    "valid with brackets",
 			param:                   "test(subshell)",
 			shellMetaCharactersType: ShellMetaCharactersTypeAllowBrackets,

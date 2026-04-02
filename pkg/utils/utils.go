@@ -12,6 +12,10 @@ var (
 	// shellMetaCharacters is the pattern for shell metacharacters.
 	shellMetaCharacters = regexp.MustCompile(`[;&|$` + "`" + `<>\\()]`)
 
+	// shellMetaCharactersNoAmp is like shellMetaCharacters but allows & for
+	// commands which use && for logical AND operations.
+	shellMetaCharactersNoAmp = regexp.MustCompile(`[;|$` + "`" + `<>\\]`)
+
 	// shellMetaCharactersNoBrackets is like shellMetaCharacters but allows brackets.
 	shellMetaCharactersNoBrackets = regexp.MustCompile(`[;&|$` + "`" + `<>\\]`)
 
@@ -25,6 +29,7 @@ type ShellMetaCharactersType string
 // ShellMetaCharactersType values.
 const (
 	ShellMetaCharactersTypeDefault       ShellMetaCharactersType = "default"
+	ShellMetaCharactersTypeAllowAmp      ShellMetaCharactersType = "allow_amp"
 	ShellMetaCharactersTypeAllowBrackets ShellMetaCharactersType = "allow_brackets"
 )
 
@@ -72,6 +77,10 @@ func GetGitRepositoryRoot() (string, error) {
 // If shellMetaCharactersType is ShellMetaCharactersTypeAllowBrackets, the ( and ) characters are allowed.
 func validateShellMetacharacters(param string, shellMetaCharactersType ShellMetaCharactersType) error {
 	switch shellMetaCharactersType {
+	case ShellMetaCharactersTypeAllowAmp:
+		if shellMetaCharactersNoAmp.MatchString(param) {
+			return fmt.Errorf("invalid use of metacharacters in parameter: %s", param)
+		}
 	case ShellMetaCharactersTypeAllowBrackets:
 		if shellMetaCharactersNoBrackets.MatchString(param) {
 			return fmt.Errorf("invalid use of metacharacters in parameter: %s", param)

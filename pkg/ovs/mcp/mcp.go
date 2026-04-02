@@ -307,7 +307,7 @@ func (s *MCPServer) DumpFlows(ctx context.Context, req *mcp.CallToolRequest,
 				in.Bridge, in.NamespacedNameParams.Namespace, in.NamespacedNameParams.Name, err)
 		}
 		return flows, nil
-	})
+	}, true)
 	if err != nil {
 		return nil, result, fmt.Errorf("invalid filter pattern: %w", err)
 	}
@@ -348,7 +348,7 @@ func (s *MCPServer) DumpConntrack(ctx context.Context, req *mcp.CallToolRequest,
 				in.NamespacedNameParams.Namespace, in.NamespacedNameParams.Name, err)
 		}
 		return entries, nil
-	})
+	}, true)
 	if err != nil {
 		return nil, result, fmt.Errorf("invalid filter pattern: %w", err)
 	}
@@ -390,7 +390,7 @@ func (s *MCPServer) DumpOfprotoTrace(ctx context.Context, req *mcp.CallToolReque
 				in.Bridge, in.NamespacedNameParams.Namespace, in.NamespacedNameParams.Name, err)
 		}
 		return lines, nil
-	})
+	}, true)
 	if err != nil {
 		return nil, result, fmt.Errorf("invalid filter pattern: %w", err)
 	}

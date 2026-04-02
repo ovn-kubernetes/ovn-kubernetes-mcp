@@ -8,6 +8,7 @@ import (
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	kubernetesmcp "github.com/ovn-kubernetes/ovn-kubernetes-mcp/pkg/kubernetes/mcp"
 	ovntypes "github.com/ovn-kubernetes/ovn-kubernetes-mcp/pkg/ovn/types"
+	"github.com/ovn-kubernetes/ovn-kubernetes-mcp/pkg/utils"
 )
 
 // MCPServer provides OVN layer analysis tools
@@ -27,7 +28,7 @@ func (s *MCPServer) AddTools(server *mcp.Server) {
 	mcp.AddTool(server,
 		&mcp.Tool{
 			Name: "ovn-show",
-			Description: `Display a comprehensive overview of OVN configuration from either the Northbound or Southbound database.
+			Description: fmt.Sprintf(`Display a comprehensive overview of OVN configuration from either the Northbound or Southbound database.
 
 For Northbound (nbdb): Runs 'ovn-nbctl show' and displays logical switches, logical routers, 
 their ports, and connections between them.
@@ -39,19 +40,22 @@ Parameters:
 - namespace: Kubernetes namespace of the OVN pod (e.g., "openshift-ovn-kubernetes")
 - name: Name of the pod running OVN (e.g., "ovnkube-node-xxxxx")
 - database: OVN database to query - "nbdb" for Northbound or "sbdb" for Southbound
-- max_lines (optional): Limit the number of output lines returned (default: 100)
+- head (optional): Return only first N lines. Default: %d lines if tail is not specified
+- tail (optional): Return only last N lines
+- apply_tail_first (optional): If both head and tail are set and apply_tail_first is true,
+apply tail before head. Default: false
 
 Example output for nbdb:
 {
   "database": "nbdb",
   "output": "switch 1234-5678 (node1)\n    port node1-k8s\n        addresses: [\"00:00:00:00:00:01\"]\n..."
-}`,
+}`, defaultMaxLines),
 		}, s.Show)
 
 	mcp.AddTool(server,
 		&mcp.Tool{
 			Name: "ovn-get",
-			Description: `Query records from an OVN database table with flexible filtering.
+			Description: fmt.Sprintf(`Query records from an OVN database table with flexible filtering.
 
 This is a versatile command that can:
 1. List all records in a table (when no record specified)
@@ -70,8 +74,11 @@ Parameters:
 - table: Name of the table (e.g., "Logical_Switch", "Port_Binding")
 - record (optional): Record identifier (UUID or name). If not specified, lists all records
 - columns (optional): Comma-separated list of columns to display (e.g., "name,_uuid,ports")
-- filter (optional): Regex pattern to filter results
-- max_lines (optional): Limit the number of lines returned (default: 100)
+- pattern (optional): Regex pattern to filter results
+- head (optional): Return only first N lines. Default: %d lines if tail is not specified
+- tail (optional): Return only last N lines
+- apply_tail_first (optional): If both head and tail are set and apply_tail_first is true,
+apply tail before head. Default: false
 
 Example listing all records:
 {
@@ -94,13 +101,13 @@ Example getting specific columns:
   "table": "Logical_Switch",
   "columns": "name,ports",
   "output": "name: ovn-worker\nports: [uuid1, uuid2]\n\nname: join\nports: [uuid3]"
-}`,
+}`, defaultMaxLines),
 		}, s.Get)
 
 	mcp.AddTool(server,
 		&mcp.Tool{
 			Name: "ovn-lflow-list",
-			Description: `List logical flows from the OVN Southbound database.
+			Description: fmt.Sprintf(`List logical flows from the OVN Southbound database.
 
 Runs 'ovn-sbctl lflow-list' to retrieve logical flows which represent the compiled 
 logical network pipeline. This is essential for debugging packet forwarding.
@@ -109,8 +116,11 @@ Parameters:
 - namespace: Kubernetes namespace of the OVN pod
 - name: Name of the pod running OVN
 - datapath (optional): Datapath name or UUID to filter flows for a specific logical switch/router
-- filter (optional): Regex pattern to filter flows
-- max_lines (optional): Limit the number of flows returned (default: 100)
+- pattern (optional): Regex pattern to filter flows
+- head (optional): Return only first N lines. Default: %d lines if tail is not specified
+- tail (optional): Return only last N lines
+- apply_tail_first (optional): If both head and tail are set and apply_tail_first is true,
+apply tail before head. Default: false
 
 Example output:
 {
@@ -119,13 +129,13 @@ Example output:
     "table=0 (ls_in_port_sec_l2), priority=100, match=(inport == \"pod1\"), action=(next;)",
     "table=1 (ls_in_port_sec_ip), priority=90, match=(ip4), action=(next;)"
   ]
-}`,
+}`, defaultMaxLines),
 		}, s.ListLogicalFlows)
 
 	mcp.AddTool(server,
 		&mcp.Tool{
 			Name: "ovn-trace",
-			Description: `Trace a packet through the OVN logical network.
+			Description: fmt.Sprintf(`Trace a packet through the OVN logical network.
 
 Runs 'ovn-trace' to simulate packet processing through the logical network pipeline.
 This shows which logical flows match, what actions are taken, and the final disposition.
@@ -139,8 +149,11 @@ Parameters:
 - datapath: Name of the logical switch or router to start the trace
 - microflow: Microflow specification describing the packet (e.g., "inport==\"pod1\" && eth.src==00:00:00:00:00:01 && ip4.src==10.244.0.5 && ip4.dst==10.244.1.5")
 - mode (optional): Output verbosity mode - "detailed" (default), "summary", or "minimal"
-- filter (optional): Regex pattern to filter trace output
-- max_lines (optional): Limit the number of output lines returned (default: 100)
+- pattern (optional): Regex pattern to filter trace output
+- head (optional): Return only first N lines. Default: %d lines if tail is not specified
+- tail (optional): Return only last N lines
+- apply_tail_first (optional): If both head and tail are set and apply_tail_first is true,
+apply tail before head. Default: false
 
 Microflow specification examples:
 - inport=="pod1" && eth.src==00:00:00:00:00:01 && ip4.src==10.244.0.5 && ip4.dst==10.244.1.5
@@ -151,7 +164,7 @@ Example output:
   "datapath": "node1",
   "microflow": "inport==\"pod1\" && ...",
   "output": "ingress(dp=\"node1\", inport=\"pod1\")\n  0. ls_in_port_sec_l2: inport == \"pod1\", priority 50, uuid 1234\n     next;\n..."
-}`,
+}`, defaultMaxLines),
 		}, s.Trace)
 }
 
@@ -176,7 +189,7 @@ func (s *MCPServer) Show(ctx context.Context, req *mcp.CallToolRequest,
 	}
 
 	// Limit to MaxLines if specified
-	lines = limitLines(lines, in.MaxLines)
+	lines = in.HeadTailParams.Apply(lines, defaultMaxLines)
 
 	// Join all lines into a single output string
 	result.Output = strings.Join(lines, "\n")
@@ -200,7 +213,7 @@ func (s *MCPServer) Get(ctx context.Context, req *mcp.CallToolRequest,
 	if err := validateDatabase(in.Database); err != nil {
 		return nil, result, err
 	}
-	if err := validateTableName(in.Table); err != nil {
+	if err := utils.ValidateOVNTableName(in.Table); err != nil {
 		return nil, result, err
 	}
 	if err := validateColumnSpec(in.Columns); err != nil {
@@ -226,26 +239,25 @@ func (s *MCPServer) Get(ctx context.Context, req *mcp.CallToolRequest,
 		cmdArgs = append(cmdArgs, "list", in.Table, in.Record)
 	}
 
-	lines, err := s.runCommand(ctx, req, in.NamespacedNameParams, cmdArgs)
-	if err != nil {
-		if in.Record != "" {
-			return nil, result, fmt.Errorf("failed to get record %s from table %s on pod %s/%s: %w",
-				in.Record, in.Table, in.Namespace, in.Name, err)
-		}
-		return nil, result, fmt.Errorf("failed to list table %s from pod %s/%s: %w",
-			in.Table, in.Namespace, in.Name, err)
-	}
-
-	// Filter if pattern provided (for list mode)
-	if in.Record == "" {
-		lines, err = filterLines(lines, in.Filter)
+	// Match the pattern to the get results if in list mode
+	lines, err := in.PatternParams.ExecuteWithMatch(func() ([]string, error) {
+		lines, err := s.runCommand(ctx, req, in.NamespacedNameParams, cmdArgs)
 		if err != nil {
-			return nil, result, fmt.Errorf("invalid filter pattern: %w", err)
+			if in.Record != "" {
+				return nil, fmt.Errorf("failed to get record %s from table %s on pod %s/%s: %w",
+					in.Record, in.Table, in.Namespace, in.Name, err)
+			}
+			return nil, fmt.Errorf("failed to list table %s from pod %s/%s: %w",
+				in.Table, in.Namespace, in.Name, err)
 		}
+		return lines, nil
+	}, in.Record == "")
+	if err != nil {
+		return nil, result, err
 	}
 
 	// Limit to MaxLines if specified
-	lines = limitLines(lines, in.MaxLines)
+	lines = in.HeadTailParams.Apply(lines, defaultMaxLines)
 
 	result.Output = strings.Join(lines, "\n")
 	return nil, result, nil
@@ -272,20 +284,21 @@ func (s *MCPServer) ListLogicalFlows(ctx context.Context, req *mcp.CallToolReque
 		cmdArgs = append(cmdArgs, in.Datapath)
 	}
 
-	lines, err := s.runCommand(ctx, req, in.NamespacedNameParams, cmdArgs)
+	// Match the pattern to the logical flows
+	lines, err := in.PatternParams.ExecuteWithMatch(func() ([]string, error) {
+		lines, err := s.runCommand(ctx, req, in.NamespacedNameParams, cmdArgs)
+		if err != nil {
+			return nil, fmt.Errorf("failed to list logical flows from pod %s/%s: %w",
+				in.Namespace, in.Name, err)
+		}
+		return lines, nil
+	}, true)
 	if err != nil {
-		return nil, result, fmt.Errorf("failed to list logical flows from pod %s/%s: %w",
-			in.Namespace, in.Name, err)
-	}
-
-	// Filter flows if pattern provided
-	lines, err = filterLines(lines, in.Filter)
-	if err != nil {
-		return nil, result, fmt.Errorf("invalid filter pattern: %w", err)
+		return nil, result, err
 	}
 
 	// Limit to MaxLines if specified
-	lines = limitLines(lines, in.MaxLines)
+	lines = in.HeadTailParams.Apply(lines, defaultMaxLines)
 
 	result.Flows = lines
 	return nil, result, nil
@@ -322,20 +335,21 @@ func (s *MCPServer) Trace(ctx context.Context, req *mcp.CallToolRequest,
 
 	cmdArgs = append(cmdArgs, in.Datapath, in.Microflow)
 
-	lines, err := s.runCommand(ctx, req, in.NamespacedNameParams, cmdArgs)
+	// Match the pattern to the trace output
+	lines, err := in.PatternParams.ExecuteWithMatch(func() ([]string, error) {
+		lines, err := s.runCommand(ctx, req, in.NamespacedNameParams, cmdArgs)
+		if err != nil {
+			return nil, fmt.Errorf("failed to trace packet on pod %s/%s: %w",
+				in.Namespace, in.Name, err)
+		}
+		return lines, nil
+	}, true)
 	if err != nil {
-		return nil, result, fmt.Errorf("failed to trace packet on pod %s/%s: %w",
-			in.Namespace, in.Name, err)
-	}
-
-	// Filter lines if pattern provided
-	lines, err = filterLines(lines, in.Filter)
-	if err != nil {
-		return nil, result, fmt.Errorf("invalid filter pattern: %w", err)
+		return nil, result, err
 	}
 
 	// Limit to MaxLines if specified
-	lines = limitLines(lines, in.MaxLines)
+	lines = in.HeadTailParams.Apply(lines, defaultMaxLines)
 
 	result.Output = strings.Join(lines, "\n")
 	return nil, result, nil

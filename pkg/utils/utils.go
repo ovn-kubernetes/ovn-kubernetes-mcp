@@ -5,7 +5,9 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"strings"
+	"unicode/utf8"
 )
 
 var (
@@ -22,6 +24,9 @@ var (
 	// shellMetaCharactersNoBracketsSpecialCharacters is like shellMetaCharactersNoBrackets but also
 	// disallows newline, NUL byte, and single quote (').
 	shellMetaCharactersNoBracketsSpecialCharacters = regexp.MustCompile(`[;&|$` + "`" + `\n\x00` + `'<>\\]`)
+
+	// pathUnsafeChar matches the first rune not allowed in a mount path (alphanumeric, /, -, _, ., ~).
+	pathUnsafeChar = regexp.MustCompile(`[^a-zA-Z0-9/_.~-]`)
 )
 
 // ShellMetaCharactersType is the type of shell metacharacters to validate.
@@ -117,5 +122,41 @@ func ValidateSafeString(value, fieldName string, allowEmpty bool, shellMetaChara
 	if err := validateShellMetacharacters(value, shellMetaCharactersType); err != nil {
 		return fmt.Errorf("invalid %s: contains potentially dangerous characters: %w", fieldName, err)
 	}
+	return nil
+}
+
+// ValidatePath validates that a path is safe to use for mounting.
+// It ensures the path:
+// - Is absolute (starts with /)
+// - Does not contain path traversal patterns (..)
+// - Contains only safe characters
+func ValidatePath(path, pathType string, allowEmpty bool) error {
+	if path == "" {
+		if allowEmpty {
+			return nil
+		}
+		return fmt.Errorf("%s cannot be empty", pathType)
+	}
+
+	// Ensure path is absolute
+	if !filepath.IsAbs(path) {
+		return fmt.Errorf("%s must be an absolute path (start with /), got: %s", pathType, path)
+	}
+
+	// Check for path traversal patterns: reject any path element that is exactly ".."
+	if slices.Contains(strings.Split(path, string(filepath.Separator)), "..") {
+		return fmt.Errorf("%s contains path traversal element '..': %s", pathType, path)
+	}
+
+	// Reject null bytes, control characters, shell specials, and other disallowed runes.
+	if loc := pathUnsafeChar.FindStringIndex(path); loc != nil {
+		i := loc[0]
+		r, size := utf8.DecodeRuneInString(path[i:])
+		if r == utf8.RuneError && size <= 1 {
+			return fmt.Errorf("%s contains invalid/unsafe byte at position %d: 0x%02X", pathType, i, path[i])
+		}
+		return fmt.Errorf("%s contains unsafe character at position %d: %c (U+%04X)", pathType, i, r, r)
+	}
+
 	return nil
 }

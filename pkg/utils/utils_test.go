@@ -2,6 +2,7 @@ package utils
 
 import (
 	"slices"
+	"strings"
 	"testing"
 )
 
@@ -215,6 +216,195 @@ func TestValidateShellMetacharacters(t *testing.T) {
 			}
 			if !tt.wantError && err != nil {
 				t.Errorf("ValidateShellMetacharacters(%q, %s) expected no error, got %v", tt.param, tt.shellMetaCharactersType, err)
+			}
+		})
+	}
+}
+
+func TestValidatePath(t *testing.T) {
+	tests := []struct {
+		name       string
+		path       string
+		pathType   string
+		allowEmpty bool
+		wantErr    bool
+		errSubstr  string
+	}{
+		{
+			name:       "empty path allowed",
+			path:       "",
+			pathType:   "hostPath",
+			allowEmpty: true,
+			wantErr:    false,
+		},
+		{
+			name:       "empty path not allowed",
+			path:       "",
+			pathType:   "hostPath",
+			allowEmpty: false,
+			wantErr:    true,
+			errSubstr:  "cannot be empty",
+		},
+		{
+			name:       "root only",
+			path:       "/",
+			pathType:   "mountPath",
+			allowEmpty: true,
+			wantErr:    false,
+		},
+		{
+			name:       "simple absolute path",
+			path:       "/var/log",
+			pathType:   "hostPath",
+			allowEmpty: true,
+			wantErr:    false,
+		},
+		{
+			name:       "nested with allowed punctuation",
+			path:       "/opt/my-app/data-1/sub_dir.v2/~backup",
+			pathType:   "hostPath",
+			allowEmpty: true,
+			wantErr:    false,
+		},
+		{
+			name:       "digits in path",
+			path:       "/run/user/1000/pod123",
+			pathType:   "mountPath",
+			allowEmpty: true,
+			wantErr:    false,
+		},
+		{
+			name:       "relative path rejected",
+			path:       "var/lib",
+			pathType:   "hostPath",
+			allowEmpty: true,
+			wantErr:    true,
+			errSubstr:  "must be an absolute path",
+		},
+		{
+			name:       "relative with dot slash",
+			path:       "./etc",
+			pathType:   "hostPath",
+			allowEmpty: true,
+			wantErr:    true,
+			errSubstr:  "must be an absolute path",
+		},
+		{
+			name:       "double dot segment in middle",
+			path:       "/var/../etc",
+			pathType:   "hostPath",
+			allowEmpty: true,
+			wantErr:    true,
+			errSubstr:  "path traversal",
+		},
+		{
+			name:       "double dot segment at end",
+			path:       "/var/lib/..",
+			pathType:   "mountPath",
+			allowEmpty: true,
+			wantErr:    true,
+			errSubstr:  "path traversal",
+		},
+		{
+			name:       "double dot only after root",
+			path:       "/..",
+			pathType:   "hostPath",
+			allowEmpty: true,
+			wantErr:    true,
+			errSubstr:  "path traversal",
+		},
+		{
+			name:       "triple dot segment is not traversal token",
+			path:       "/safe/.../still-ok",
+			pathType:   "hostPath",
+			allowEmpty: true,
+			wantErr:    false,
+		},
+		{
+			name:       "single dot segment allowed",
+			path:       "/var/./lib",
+			pathType:   "hostPath",
+			allowEmpty: true,
+			wantErr:    false,
+		},
+		{
+			name:       "space in path",
+			path:       "/var/my dir",
+			pathType:   "hostPath",
+			allowEmpty: true,
+			wantErr:    true,
+			errSubstr:  "unsafe character",
+		},
+		{
+			name:       "semicolon shell metacharacter",
+			path:       "/tmp/x;rm",
+			pathType:   "hostPath",
+			allowEmpty: true,
+			wantErr:    true,
+			errSubstr:  "unsafe character",
+		},
+		{
+			name:       "pipe character",
+			path:       "/tmp/a|b",
+			pathType:   "mountPath",
+			allowEmpty: true,
+			wantErr:    true,
+			errSubstr:  "unsafe character",
+		},
+		{
+			name:       "dollar sign",
+			path:       "/tmp/$HOME",
+			pathType:   "hostPath",
+			allowEmpty: true,
+			wantErr:    true,
+			errSubstr:  "unsafe character",
+		},
+		{
+			name:       "null byte",
+			path:       "/tmp/\x00evil",
+			pathType:   "hostPath",
+			allowEmpty: true,
+			wantErr:    true,
+			errSubstr:  "unsafe character",
+		},
+		{
+			name:      "tab character",
+			path:      "/tmp/\tevil",
+			pathType:  "hostPath",
+			wantErr:   true,
+			errSubstr: "unsafe character",
+		},
+		{
+			name:       "non-ASCII letter",
+			path:       "/tmp/café",
+			pathType:   "hostPath",
+			allowEmpty: true,
+			wantErr:    true,
+			errSubstr:  "unsafe character",
+		},
+		{
+			name:      "pathType appears in absolute path error",
+			path:      "relative",
+			pathType:  "customField",
+			wantErr:   true,
+			errSubstr: "customField",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := ValidatePath(tt.path, tt.pathType, tt.allowEmpty)
+			if tt.wantErr {
+				if err == nil {
+					t.Fatalf("ValidatePath(%q, %q) want error, got nil", tt.path, tt.pathType)
+				}
+				if tt.errSubstr != "" && !strings.Contains(err.Error(), tt.errSubstr) {
+					t.Fatalf("error %q should contain %q", err.Error(), tt.errSubstr)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("ValidatePath(%q, %q) want nil, got %v", tt.path, tt.pathType, err)
 			}
 		})
 	}

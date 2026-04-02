@@ -2,6 +2,7 @@ package types
 
 import (
 	k8stypes "github.com/ovn-kubernetes/ovn-kubernetes-mcp/pkg/kubernetes/types"
+	"github.com/ovn-kubernetes/ovn-kubernetes-mcp/pkg/utils"
 )
 
 // Database represents an OVN database type.
@@ -18,7 +19,7 @@ const (
 type ShowParams struct {
 	k8stypes.NamespacedNameParams
 	Database Database `json:"database"`
-	MaxLines int      `json:"max_lines,omitempty"`
+	utils.HeadTailParams
 }
 
 // ShowResult contains the output of ovn-nbctl/ovn-sbctl show command.
@@ -31,8 +32,8 @@ type ShowResult struct {
 type LogicalFlowListParams struct {
 	k8stypes.NamespacedNameParams
 	Datapath string `json:"datapath,omitempty"`
-	Filter   string `json:"filter,omitempty"`
-	MaxLines int    `json:"max_lines,omitempty"`
+	utils.PatternParams
+	utils.HeadTailParams
 }
 
 // LogicalFlowListResult contains the list of logical flows.
@@ -59,8 +60,8 @@ type OVNTraceParams struct {
 	Datapath  string    `json:"datapath"`
 	Microflow string    `json:"microflow"`
 	Mode      TraceMode `json:"mode,omitempty"` // Output mode: detailed (default), summary, or minimal
-	Filter    string    `json:"filter,omitempty"`
-	MaxLines  int       `json:"max_lines,omitempty"`
+	utils.PatternParams
+	utils.HeadTailParams
 }
 
 // OVNTraceResult contains the output of ovn-trace command.
@@ -81,8 +82,8 @@ type GetParams struct {
 	Table    string   `json:"table"`
 	Record   string   `json:"record,omitempty"`  // Optional: if empty, lists all records
 	Columns  string   `json:"columns,omitempty"` // Optional: comma-separated columns to retrieve
-	Filter   string   `json:"filter,omitempty"`
-	MaxLines int      `json:"max_lines,omitempty"`
+	utils.PatternParams
+	utils.HeadTailParams
 }
 
 // GetResult contains the output of ovn-nbctl/ovn-sbctl query.

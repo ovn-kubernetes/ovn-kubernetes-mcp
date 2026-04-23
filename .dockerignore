@@ -1,0 +1,31 @@
+# IDE
+.cursor
+.cursorignore
+
+# Build output and local artifacts
+_output
+
+# Docs and project files (not needed for build)
+*.md
+MAINTAINERS
+LICENSE
+
+# Test and hack (not needed in image)
+test
+hack
+
+# Kubernetes config (not needed in image)
+config
+
+# Docker
+Dockerfile
+.dockerignore
+
+# Vendor is re-fetched via go mod download in the image
+vendor
+
+# Misc
+*.tmp
+*.log
+*.swp
+*~

@@ -3,8 +3,8 @@ package main
 import (
 	"context"
 	"flag"
-	"fmt"
 	"log"
+	"net"
 	"net/http"
 	"os"
 	"os/signal"
@@ -27,6 +27,7 @@ const defaultNetshootImage = "nicolaka/netshoot:v0.15"
 type MCPServerConfig struct {
 	Mode         string
 	Transport    string
+	Host         string
 	Port         string
 	PwruImage    string
 	TcpdumpImage string
@@ -139,10 +140,13 @@ func main() {
 		handler := mcp.NewStreamableHTTPHandler(func(*http.Request) *mcp.Server {
 			return ovnkMcpServer
 		}, nil)
-		log.Printf("Listening on localhost:%s", serverCfg.Port)
+		addr := net.JoinHostPort(serverCfg.Host, serverCfg.Port)
+		log.Printf("Listening on %s", addr)
 		server = &http.Server{
-			Addr:    fmt.Sprintf("localhost:%s", serverCfg.Port),
-			Handler: handler,
+			Addr:              addr,
+			Handler:           handler,
+			ReadHeaderTimeout: 10 * time.Second,
+			IdleTimeout:       60 * time.Second,
 		}
 		if err := server.ListenAndServe(); err != nil {
 			log.Printf("HTTP server failed: %v", err)
@@ -158,6 +162,7 @@ func parseFlags() *MCPServerConfig {
 
 	flag.StringVar(&cfg.Mode, "mode", "live-cluster", "Mode of debugging: live-cluster or offline or dual")
 	flag.StringVar(&cfg.Transport, "transport", "stdio", "Transport to use: stdio or http")
+	flag.StringVar(&cfg.Host, "host", "localhost", "Host to bind to (use 0.0.0.0 for container/cluster)")
 	flag.StringVar(&cfg.Port, "port", "8080", "Port to use")
 	flag.StringVar(&cfg.Kubernetes.Kubeconfig, "kubeconfig", "", "Path to the kubeconfig file")
 	flag.StringVar(&cfg.PwruImage, "pwru-image", "docker.io/cilium/pwru:v1.0.10", "Container image for pwru operations")

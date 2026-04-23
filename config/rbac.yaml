@@ -1,0 +1,41 @@
+# ClusterRole for the OVN-Kubernetes MCP server.
+# It needs read access to cluster resources (for tools that list/get resources)
+# and create/delete pods for debug operations (pwru, tcpdump, kernel tools).
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: ovnk-mcp-server
+  labels:
+    app.kubernetes.io/name: ovn-kubernetes-mcp
+rules:
+  # Broad read access is intentional: MCP tooling can fetch any resource the user asks for.
+  - apiGroups: ["*"]
+    resources: ["*"]
+    verbs: ["get", "list", "watch"]
+  # Create and delete pods for debug tools (pwru, tcpdump, kernel operations)
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["create", "delete"]
+  # Pod log access
+  - apiGroups: [""]
+    resources: ["pods/log"]
+    verbs: ["get"]
+  # Pod exec access
+  - apiGroups: [""]
+    resources: ["pods/exec"]
+    verbs: ["create"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: ovnk-mcp-server
+  labels:
+    app.kubernetes.io/name: ovn-kubernetes-mcp
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: ovnk-mcp-server
+subjects:
+  - kind: ServiceAccount
+    name: ovnk-mcp-server
+    namespace: ovn-kubernetes-mcp

@@ -49,7 +49,10 @@ func setupLiveCluster(serverCfg *MCPServerConfig, server *mcp.Server) {
 	log.Println("Adding OVN tools to OVN-K MCP server")
 	ovnServer.AddTools(server)
 
-	ovsServer := ovsmcp.NewMCPServer(k8sMcpServer)
+	ovsServer, err := ovsmcp.NewMCPServer(k8sMcpServer.RunPodExecCommand)
+	if err != nil {
+		log.Fatalf("Failed to create OVS MCP server: %v", err)
+	}
 	log.Println("Adding OVS tools to OVN-K MCP server")
 	ovsServer.AddTools(server)
 

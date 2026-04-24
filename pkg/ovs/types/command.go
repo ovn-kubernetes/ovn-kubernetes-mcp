@@ -2,6 +2,7 @@ package types
 
 import (
 	k8stypes "github.com/ovn-kubernetes/ovn-kubernetes-mcp/pkg/kubernetes/types"
+	"github.com/ovn-kubernetes/ovn-kubernetes-mcp/pkg/utils"
 )
 
 // BridgeResult contains the list of OVS bridges found on a node.
@@ -12,7 +13,7 @@ type BridgeResult struct {
 // ShowParams are the parameters for ovs-vsctl show command.
 type ShowParams struct {
 	k8stypes.NamespacedNameParams
-	MaxLines int `json:"max_lines,omitempty"`
+	utils.HeadTailParams
 }
 
 // ShowResult contains the output of ovs-vsctl show command.
@@ -44,26 +45,26 @@ type ConntrackResult struct {
 // GetOVSCommandParams are the parameters for OVS related commands.
 type GetOVSCommandParams struct {
 	k8stypes.NamespacedNameParams
-	Bridge   string `json:"bridge"`
-	Filter   string `json:"filter,omitempty"`
-	MaxLines int    `json:"max_lines,omitempty"`
+	Bridge string `json:"bridge"`
+	utils.PatternParams
+	utils.HeadTailParams
 }
 
 // DumpConntrackParams are the parameters for dump-conntrack command.
 type DumpConntrackParams struct {
 	k8stypes.NamespacedNameParams
-	Filter           string   `json:"filter,omitempty"`
-	MaxLines         int      `json:"max_lines,omitempty"`
+	utils.PatternParams
+	utils.HeadTailParams
 	AdditionalParams []string `json:"additional_params,omitempty"`
 }
 
 // OfprotoTraceParams are the parameters for ofproto/trace command.
 type OfprotoTraceParams struct {
 	k8stypes.NamespacedNameParams
-	Bridge   string `json:"bridge"`
-	Flow     string `json:"flow"`
-	Filter   string `json:"filter,omitempty"`
-	MaxLines int    `json:"max_lines,omitempty"`
+	Bridge string `json:"bridge"`
+	Flow   string `json:"flow"`
+	utils.PatternParams
+	utils.HeadTailParams
 }
 
 // OfprotoTraceResult returns the complete trace output.

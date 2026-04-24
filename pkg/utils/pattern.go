@@ -19,7 +19,7 @@ func (p *PatternParams) ExecuteWithMatch(f func() ([]string, error)) ([]string, 
 	}
 	searchPattern, err := regexp.Compile(p.Pattern)
 	if err != nil {
-		return nil, fmt.Errorf("invalid search pattern: %w", err)
+		return nil, fmt.Errorf("invalid search pattern %q: %w", p.Pattern, err)
 	}
 
 	lines, err := f()

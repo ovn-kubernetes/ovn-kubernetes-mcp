@@ -49,7 +49,7 @@ func setupLiveCluster(serverCfg *MCPServerConfig, server *mcp.Server) {
 	log.Println("Adding OVN tools to OVN-K MCP server")
 	ovnServer.AddTools(server)
 
-	ovsServer := ovsmcp.NewMCPServer(k8sMcpServer)
+	ovsServer := ovsmcp.NewMCPServer(k8sMcpServer.RunCommand)
 	log.Println("Adding OVS tools to OVN-K MCP server")
 	ovsServer.AddTools(server)
 

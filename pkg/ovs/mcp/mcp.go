@@ -93,7 +93,7 @@ Example output:
 	mcp.AddTool(server,
 		&mcp.Tool{
 			Name: "ovs-vsctl-show",
-			Description: `Display a comprehensive overview of OVS configuration.
+			Description: fmt.Sprintf(`Display a comprehensive overview of OVS configuration.
 
 Runs 'ovs-vsctl show' command and returns detailed information about bridges, ports, interfaces,
 controllers, and their configurations in a hierarchical format.
@@ -108,18 +108,20 @@ This command is useful for getting a complete view of the OVS switch configurati
 Parameters:
 - namespace: Kubernetes namespace of the OVS pod
 - name: Name of the pod running OVS
-- max_lines (optional): Limit the number of output lines returned
+- head (optional): Return only first N lines. Default: %d lines if tail is not specified
+- tail (optional): Return only last N lines
+- apply_tail_first (optional): If both head and tail are set and apply_tail_first is true, apply tail before head. Default: false
 
 Example output:
 {
   "output": "a1b2c3d4-5678-90ab-cdef-1234567890ab\n    Bridge br-int\n        Port ovn-k8s-mp0\n            Interface ovn-k8s-mp0\n                type: internal\n        Port br-int\n            Interface br-int\n                type: internal\n    ovs_version: \"2.17.0\""
-}`,
+}`, defaultMaxLines),
 		}, s.Show)
 
 	mcp.AddTool(server,
 		&mcp.Tool{
 			Name: "ovs-ofctl-dump-flows",
-			Description: `Dump OpenFlow flows from a specific OVS bridge.
+			Description: fmt.Sprintf(`Dump OpenFlow flows from a specific OVS bridge.
 
 Runs 'ovs-ofctl dump-flows' command on the specified bridge and returns the flow entries.
 
@@ -127,8 +129,10 @@ Parameters:
 - namespace: Kubernetes namespace of the OVS pod
 - name: Name of the pod running OVS
 - bridge: Name of the OVS bridge (e.g., "br-int")
-- filter (optional): Regex pattern to filter flows
-- max_lines (optional): Limit the number of flows returned
+- pattern (optional): Regex pattern to filter flows
+- head (optional): Return only first N lines. Default: %d lines if tail is not specified
+- tail (optional): Return only last N lines
+- apply_tail_first (optional): If both head and tail are set and apply_tail_first is true, apply tail before head. Default: false
 
 Example output:
 {
@@ -137,13 +141,13 @@ Example output:
     "cookie=0x0, duration=123.456s, table=0, n_packets=100, n_bytes=10000, priority=100,in_port=1 actions=output:2",
     "cookie=0x0, duration=123.456s, table=0, n_packets=50, n_bytes=5000, priority=90,in_port=2 actions=output:1"
   ]
-}`,
+}`, defaultMaxLines),
 		}, s.DumpFlows)
 
 	mcp.AddTool(server,
 		&mcp.Tool{
 			Name: "ovs-appctl-dump-conntrack",
-			Description: `Dump connection tracking entries from OVS datapath.
+			Description: fmt.Sprintf(`Dump connection tracking entries from OVS datapath.
 
 Runs 'ovs-appctl dpctl/dump-conntrack' command and returns the conntrack entries.
 
@@ -153,8 +157,10 @@ Each entry shows source/destination IPs, ports, protocol, connection state, and 
 Parameters:
 - namespace: Kubernetes namespace of the OVS pod
 - name: Name of the pod running OVS
-- filter (optional): Regex pattern to filter conntrack entries
-- max_lines (optional): Limit the number of entries returned
+- pattern (optional): Regex pattern to filter conntrack entries
+- head (optional): Return only first N lines. Default: %d lines if tail is not specified
+- tail (optional): Return only last N lines
+- apply_tail_first (optional): If both head and tail are set and apply_tail_first is true, apply tail before head. Default: false
 - additional_params (optional): Additional parameters to pass to dpctl/dump-conntrack command (e.g., ["zone=5"])
 
 Example output:
@@ -163,13 +169,13 @@ Example output:
     "tcp,orig=(src=10.244.0.5,dst=10.96.0.1,sport=45678,dport=443),reply=(src=10.96.0.1,dst=10.244.0.5,sport=443,dport=45678)",
     "udp,orig=(src=10.244.0.3,dst=8.8.8.8,sport=53214,dport=53),reply=(src=8.8.8.8,dst=10.244.0.3,sport=53,dport=53214)"
   ]
-}`,
+}`, defaultMaxLines),
 		}, s.DumpConntrack)
 
 	mcp.AddTool(server,
 		&mcp.Tool{
 			Name: "ovs-appctl-ofproto-trace",
-			Description: `Trace a packet through the OpenFlow pipeline.
+			Description: fmt.Sprintf(`Trace a packet through the OpenFlow pipeline.
 
 Runs 'ovs-appctl ofproto/trace' command to simulate packet processing through OpenFlow tables.
 This shows which flows match, what actions are taken, and the final disposition of the packet.
@@ -182,8 +188,10 @@ Parameters:
 - name: Name of the pod running OVS
 - bridge: Name of the OVS bridge (e.g., "br-int")
 - flow: Flow specification describing the packet to trace (e.g., "in_port=1,ip,nw_src=10.244.0.5,nw_dst=10.96.0.1")
-- filter (optional): Regex pattern to filter trace output lines
-- max_lines (optional): Limit the number of output lines returned
+- pattern (optional): Regex pattern to filter trace output lines
+- head (optional): Return only first N lines. Default: %d lines if tail is not specified
+- tail (optional): Return only last N lines
+- apply_tail_first (optional): If both head and tail are set and apply_tail_first is true, apply tail before head. Default: false
 
 Flow specification examples:
 - "in_port=1,icmp"
@@ -195,7 +203,7 @@ Example output:
   "bridge": "br-int",
   "flow": "in_port=1,ip,nw_src=10.244.0.5,nw_dst=10.96.0.1",
   "output": "Flow: ip,in_port=1,nw_src=10.244.0.5,nw_dst=10.96.0.1\n\nbridge(\"br-int\")\n-------------\n 0. priority 100\n    resubmit(,10)\n10. ip,nw_dst=10.96.0.1, priority 200\n    load:0x1->NXM_NX_REG0[]\n    resubmit(,20)\n...\nFinal flow: ...\nDatapath actions: ..."
-}`,
+}`, defaultMaxLines),
 		}, s.DumpOfprotoTrace)
 }
 
@@ -227,8 +235,8 @@ func (s *MCPServer) Show(ctx context.Context, req *mcp.CallToolRequest,
 			in.Namespace, in.Name, err)
 	}
 
-	// Limit to MaxLines if specified
-	lines = limitLines(lines, in.MaxLines)
+	// Apply the head and tail parameters to the lines
+	lines = in.HeadTailParams.Apply(lines, defaultMaxLines)
 
 	// Join all lines into a single output string
 	result.Output = strings.Join(lines, "\n")
@@ -290,21 +298,22 @@ func (s *MCPServer) DumpFlows(ctx context.Context, req *mcp.CallToolRequest,
 		return nil, result, err
 	}
 
-	// Run ovs-ofctl dump-flows command
-	flows, err := s.runCommand(ctx, req, in.NamespacedNameParams, []string{"ovs-ofctl", "dump-flows", in.Bridge})
-	if err != nil {
-		return nil, result, fmt.Errorf("failed to dump flows for bridge %s on pod %s/%s: %w",
-			in.Bridge, in.NamespacedNameParams.Namespace, in.NamespacedNameParams.Name, err)
-	}
-
 	// Filter flows by pattern if provided
-	flows, err = filterLines(flows, in.Filter)
+	flows, err := in.PatternParams.ExecuteWithMatch(func() ([]string, error) {
+		// Run ovs-ofctl dump-flows command
+		flows, err := s.runCommand(ctx, req, in.NamespacedNameParams, []string{"ovs-ofctl", "dump-flows", in.Bridge})
+		if err != nil {
+			return nil, fmt.Errorf("failed to dump flows for bridge %s on pod %s/%s: %w",
+				in.Bridge, in.NamespacedNameParams.Namespace, in.NamespacedNameParams.Name, err)
+		}
+		return flows, nil
+	}, true)
 	if err != nil {
 		return nil, result, fmt.Errorf("invalid filter pattern: %w", err)
 	}
 
-	// Limit to MaxLines if specified
-	flows = limitLines(flows, in.MaxLines)
+	// Apply the head and tail parameters to the flows
+	flows = in.HeadTailParams.Apply(flows, defaultMaxLines)
 
 	result.Flows = flows
 	return nil, result, nil
@@ -330,21 +339,22 @@ func (s *MCPServer) DumpConntrack(ctx context.Context, req *mcp.CallToolRequest,
 		cmd = append(cmd, in.AdditionalParams...)
 	}
 
-	// Run ovs-appctl dpctl/dump-conntrack command
-	entries, err := s.runCommand(ctx, req, in.NamespacedNameParams, cmd)
-	if err != nil {
-		return nil, result, fmt.Errorf("failed to dump conntrack on pod %s/%s: %w",
-			in.NamespacedNameParams.Namespace, in.NamespacedNameParams.Name, err)
-	}
-
 	// Filter entries by pattern if provided
-	entries, err = filterLines(entries, in.Filter)
+	entries, err := in.PatternParams.ExecuteWithMatch(func() ([]string, error) {
+		// Run ovs-appctl dpctl/dump-conntrack command
+		entries, err := s.runCommand(ctx, req, in.NamespacedNameParams, cmd)
+		if err != nil {
+			return nil, fmt.Errorf("failed to dump conntrack on pod %s/%s: %w",
+				in.NamespacedNameParams.Namespace, in.NamespacedNameParams.Name, err)
+		}
+		return entries, nil
+	}, true)
 	if err != nil {
 		return nil, result, fmt.Errorf("invalid filter pattern: %w", err)
 	}
 
-	// Limit to MaxLines if specified
-	entries = limitLines(entries, in.MaxLines)
+	// Apply the head and tail parameters to the entries
+	entries = in.HeadTailParams.Apply(entries, defaultMaxLines)
 
 	result.Entries = entries
 	return nil, result, nil
@@ -371,21 +381,22 @@ func (s *MCPServer) DumpOfprotoTrace(ctx context.Context, req *mcp.CallToolReque
 	// Build command: ovs-appctl ofproto/trace <bridge> <flow>
 	cmd := []string{"ovs-appctl", "ofproto/trace", in.Bridge, in.Flow}
 
-	// Run ovs-appctl ofproto/trace command
-	lines, err := s.runCommand(ctx, req, in.NamespacedNameParams, cmd)
-	if err != nil {
-		return nil, result, fmt.Errorf("failed to trace flow on bridge %s, pod %s/%s: %w",
-			in.Bridge, in.NamespacedNameParams.Namespace, in.NamespacedNameParams.Name, err)
-	}
-
 	// Filter lines by pattern if provided
-	lines, err = filterLines(lines, in.Filter)
+	lines, err := in.PatternParams.ExecuteWithMatch(func() ([]string, error) {
+		// Run ovs-appctl ofproto/trace command
+		lines, err := s.runCommand(ctx, req, in.NamespacedNameParams, cmd)
+		if err != nil {
+			return nil, fmt.Errorf("failed to trace flow on bridge %s, pod %s/%s: %w",
+				in.Bridge, in.NamespacedNameParams.Namespace, in.NamespacedNameParams.Name, err)
+		}
+		return lines, nil
+	}, true)
 	if err != nil {
 		return nil, result, fmt.Errorf("invalid filter pattern: %w", err)
 	}
 
-	// Limit to MaxLines if specified
-	lines = limitLines(lines, in.MaxLines)
+	// Apply the head and tail parameters to the lines
+	lines = in.HeadTailParams.Apply(lines, defaultMaxLines)
 
 	// Join all lines into a single output string
 	result.Output = strings.Join(lines, "\n")

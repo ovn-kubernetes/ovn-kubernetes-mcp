@@ -4,7 +4,40 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
+	"slices"
 	"strings"
+	"unicode/utf8"
+)
+
+var (
+	// shellMetaCharacters is the pattern for shell metacharacters.
+	shellMetaCharacters = regexp.MustCompile(`[;&|$` + "`" + `<>\\()]`)
+
+	// shellMetaCharactersNoAmp is like shellMetaCharacters but allows & for
+	// commands which use && for logical AND operations.
+	shellMetaCharactersNoAmp = regexp.MustCompile(`[;|$` + "`" + `<>\\]`)
+
+	// shellMetaCharactersNoBrackets is like shellMetaCharacters but allows brackets.
+	shellMetaCharactersNoBrackets = regexp.MustCompile(`[;&|$` + "`" + `<>\\]`)
+
+	// shellMetaCharactersAndSpecialCharacters is like shellMetaCharacters but also
+	// disallows new line, null byte, and special characters.
+	shellMetaCharactersAndSpecialCharacters = regexp.MustCompile(`[;&|$` + "`" + `\n\x00` + `'<>\\]|\$\(`)
+
+	// pathUnsafeChar matches the first rune not allowed in a mount path (alphanumeric, /, -, _, ., ~).
+	pathUnsafeChar = regexp.MustCompile(`[^a-zA-Z0-9/_.~-]`)
+)
+
+// ShellMetaCharactersType is the type of shell metacharacters to validate.
+type ShellMetaCharactersType string
+
+// ShellMetaCharactersType values.
+const (
+	ShellMetaCharactersTypeDefault                   ShellMetaCharactersType = "default"
+	ShellMetaCharactersTypeAllowAmp                  ShellMetaCharactersType = "allow_amp"
+	ShellMetaCharactersTypeAllowBrackets             ShellMetaCharactersType = "allow_brackets"
+	ShellMetaCharactersTypeDisallowSpecialCharacters ShellMetaCharactersType = "disallow_special_characters"
 )
 
 // StripEmptyLines strips empty lines from a slice of strings. It will return a new slice of strings
@@ -42,4 +75,85 @@ func GetGitRepositoryRoot() (string, error) {
 		}
 		currentDir = parentDir
 	}
+}
+
+// validateShellMetacharacters validates whether the given parameter contains shell
+// metacharacters or not. It returns an error if there are any shell metacharacters.
+// If shellMetaCharactersType is ShellMetaCharactersTypeDefault, no shell metacharacters are allowed.
+// If shellMetaCharactersType is ShellMetaCharactersTypeAllowAmp, the & character is allowed.
+// If shellMetaCharactersType is ShellMetaCharactersTypeAllowBrackets, the ( and ) characters are allowed.
+// If shellMetaCharactersType is ShellMetaCharactersTypeDisallowSpecialCharacters, the new line, null byte,
+// and special characters are disallowed.
+func validateShellMetacharacters(param string, shellMetaCharactersType ShellMetaCharactersType) error {
+	switch shellMetaCharactersType {
+	case ShellMetaCharactersTypeAllowAmp:
+		if shellMetaCharactersNoAmp.MatchString(param) {
+			return fmt.Errorf("invalid use of metacharacters in parameter: %s", param)
+		}
+	case ShellMetaCharactersTypeAllowBrackets:
+		if shellMetaCharactersNoBrackets.MatchString(param) {
+			return fmt.Errorf("invalid use of metacharacters in parameter: %s", param)
+		}
+	case ShellMetaCharactersTypeDisallowSpecialCharacters:
+		if shellMetaCharactersAndSpecialCharacters.MatchString(param) {
+			return fmt.Errorf("invalid use of metacharacters in parameter: %s", param)
+		}
+	case ShellMetaCharactersTypeDefault:
+		if shellMetaCharacters.MatchString(param) {
+			return fmt.Errorf("invalid use of metacharacters in parameter: %s", param)
+		}
+	default:
+		return fmt.Errorf("invalid shell metacharacters type: %s", shellMetaCharactersType)
+	}
+
+	return nil
+}
+
+// ValidateSafeString is same as validateShellMetacharacters but it also checks if the string is empty.
+// If allowEmpty is true, an empty string is allowed and no error is returned.
+func ValidateSafeString(value, fieldName string, allowEmpty bool, shellMetaCharactersType ShellMetaCharactersType) error {
+	if value == "" {
+		if allowEmpty {
+			return nil
+		}
+		return fmt.Errorf("%s cannot be empty", fieldName)
+	}
+
+	if err := validateShellMetacharacters(value, shellMetaCharactersType); err != nil {
+		return fmt.Errorf("invalid %s: contains potentially dangerous characters: %w", fieldName, err)
+	}
+	return nil
+}
+
+// ValidatePath validates that a path is safe to use for mounting.
+// It ensures the path:
+// - Is absolute (starts with /)
+// - Does not contain path traversal patterns (..)
+// - Contains only safe characters
+func ValidatePath(path, pathType string) error {
+	if path == "" {
+		return nil // Empty paths are allowed and will be set to defaults
+	}
+
+	// Ensure path is absolute
+	if !filepath.IsAbs(path) {
+		return fmt.Errorf("%s must be an absolute path (start with /), got: %s", pathType, path)
+	}
+
+	// Check for path traversal patterns: reject any path element that is exactly ".."
+	if slices.Contains(strings.Split(path, string(filepath.Separator)), "..") {
+		return fmt.Errorf("%s contains path traversal element '..': %s", pathType, path)
+	}
+
+	// Reject null bytes, control characters, shell specials, and other disallowed runes.
+	if loc := pathUnsafeChar.FindStringIndex(path); loc != nil {
+		i := loc[0]
+		r, size := utf8.DecodeRuneInString(path[i:])
+		if r == utf8.RuneError && size <= 1 {
+			return fmt.Errorf("%s contains invalid/unsafe byte at position %d: 0x%02X", pathType, i, path[i])
+		}
+		return fmt.Errorf("%s contains unsafe character at position %d: %c (U+%04X)", pathType, i, r, r)
+	}
+
+	return nil
 }

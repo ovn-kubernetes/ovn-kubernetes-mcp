@@ -8,6 +8,7 @@ import (
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"github.com/ovn-kubernetes/ovn-kubernetes-mcp/pkg/kernel/types"
+	"github.com/ovn-kubernetes/ovn-kubernetes-mcp/pkg/utils"
 )
 
 const conntrackSystemFile = "/proc/net/nf_conntrack"
@@ -23,10 +24,8 @@ func (s *MCPServer) GetConntrack(ctx context.Context, req *mcp.CallToolRequest, 
 	if err := validateConntrackCommand(in.Command, conntrackCliAvailable); err != nil {
 		return nil, types.Result{}, fmt.Errorf("error while getting list of conntrack entries: %w", err)
 	}
-	if in.FilterParameters != "" {
-		if err := validateParameters(in.FilterParameters); err != nil {
-			return nil, types.Result{}, fmt.Errorf("error while getting list of conntrack entries: %w", err)
-		}
+	if err := utils.ValidateSafeString(in.FilterParameters, "filter parameters", true, utils.ShellMetaCharactersTypeDefault); err != nil {
+		return nil, types.Result{}, fmt.Errorf("error while getting list of conntrack entries: %w", err)
 	}
 
 	var stdout string
@@ -39,34 +38,34 @@ func (s *MCPServer) GetConntrack(ctx context.Context, req *mcp.CallToolRequest, 
 		return nil, types.Result{}, fmt.Errorf("error while getting list of conntrack entries: %w", err)
 	}
 
-	stdout = limitOutputLines(stdout, in.MaxLines)
+	stdout = strings.Join(in.HeadTailParams.Apply(strings.Split(stdout, "\n"), defaultMaxOutputLines), "\n")
 	return nil, types.Result{Data: stdout}, nil
 }
 
 // getConntrackUsingCLI executes conntrack CLI commands.
 func (s *MCPServer) getConntrackUsingCLI(ctx context.Context, req *mcp.CallToolRequest, node, command, filterParameters string) (string, error) {
-	cmd := newCommand("conntrack")
+	cmd := utils.NewCommand("conntrack")
 	switch command {
 	case "-L", "--dump":
-		cmd.add(command)
-		cmd.add(strings.Fields(filterParameters)...)
+		cmd.Add(command)
+		cmd.Add(strings.Fields(filterParameters)...)
 	case "-S", "--stats":
-		cmd.add(command)
+		cmd.Add(command)
 	case "-C", "--count":
-		cmd.add(command)
+		cmd.Add(command)
 	default:
-		cmd.add("-L")
-		cmd.add(strings.Fields(filterParameters)...)
+		cmd.Add("-L")
+		cmd.Add(strings.Fields(filterParameters)...)
 	}
-	return s.executeCommand(ctx, req, node, cmd.build())
+	return s.executeCommand(ctx, req, node, cmd.Build())
 }
 
 // getConntrackFromFile parses /proc/net/nf_conntrack directly.
 // TODO: Add filter support while getting conntrack entries from /proc/net/nf_conntrack.
 func (s *MCPServer) getConntrackFromFile(ctx context.Context, req *mcp.CallToolRequest, node string) (string, error) {
-	cmd := newCommand("cat")
-	cmd.add(conntrackSystemFile)
-	return s.executeCommand(ctx, req, node, cmd.build())
+	cmd := utils.NewCommand("cat")
+	cmd.Add(conntrackSystemFile)
+	return s.executeCommand(ctx, req, node, cmd.Build())
 }
 
 // validateConntrackCommand validates the command to be used to get list of conntrack entries.

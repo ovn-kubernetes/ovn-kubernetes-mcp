@@ -8,6 +8,7 @@ import (
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"github.com/ovn-kubernetes/ovn-kubernetes-mcp/pkg/kernel/types"
+	"github.com/ovn-kubernetes/ovn-kubernetes-mcp/pkg/utils"
 )
 
 // GetIptables MCP handler for iptables operations.
@@ -25,27 +26,26 @@ func (s *MCPServer) GetIptables(ctx context.Context, req *mcp.CallToolRequest, i
 	if err := validateIptablesCommand(in.Command); err != nil {
 		return nil, types.Result{}, fmt.Errorf("error while getting list of iptables rules: %w", err)
 	}
-	if in.FilterParameters != "" {
-		if err := validateParameters(in.FilterParameters); err != nil {
-			return nil, types.Result{}, fmt.Errorf("error while getting list of iptables rules: %w", err)
-		}
+
+	if err := utils.ValidateSafeString(in.FilterParameters, "filter parameters", true, utils.ShellMetaCharactersTypeDefault); err != nil {
+		return nil, types.Result{}, fmt.Errorf("error while getting list of iptables rules: %w", err)
 	}
 
-	cmd := newCommand(iptablesCommand(in.FilterParameters))
+	cmd := utils.NewCommand(iptablesCommand(in.FilterParameters))
 	// Defaults to 'filter' table when not specified
-	cmd.addIf(in.Table == "", "-t", "filter")
-	cmd.addIfNotEmpty(in.Table, "-t", in.Table)
+	cmd.AddIf(in.Table == "", "-t", "filter")
+	cmd.AddIfNotEmpty(in.Table, "-t", in.Table)
 	// Defaults to -L (list) when command not specified
-	cmd.addIf(in.Command == "", "-L")
-	cmd.addIfNotEmpty(in.Command, in.Command)
+	cmd.AddIf(in.Command == "", "-L")
+	cmd.AddIfNotEmpty(in.Command, in.Command)
 	// FilterParameters are invalid with -S/--list-rules command
-	cmd.addIf(in.FilterParameters != "" && in.Command != "-S" && in.Command != "--list-rules", strings.Fields(in.FilterParameters)...)
+	cmd.AddIf(in.FilterParameters != "" && in.Command != "-S" && in.Command != "--list-rules", strings.Fields(in.FilterParameters)...)
 
-	stdout, err := s.executeCommand(ctx, req, in.Node, cmd.build())
+	stdout, err := s.executeCommand(ctx, req, in.Node, cmd.Build())
 	if err != nil {
 		return nil, types.Result{}, fmt.Errorf("error while getting list of iptables rules: %w", err)
 	}
-	stdout = limitOutputLines(stdout, in.MaxLines)
+	stdout = strings.Join(in.HeadTailParams.Apply(strings.Split(stdout, "\n"), defaultMaxOutputLines), "\n")
 	return nil, types.Result{Data: stdout}, nil
 }
 

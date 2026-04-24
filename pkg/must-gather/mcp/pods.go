@@ -29,7 +29,7 @@ func (s *MustGatherMCPServer) GetPodLogs(ctx context.Context, req *mcp.CallToolR
 		}
 		// Strip empty lines from the logs
 		return utils.StripEmptyLines(strings.Split(output, "\n")), nil
-	})
+	}, true)
 	if err != nil {
 		return nil, types.GetPodLogsResult{}, err
 	}

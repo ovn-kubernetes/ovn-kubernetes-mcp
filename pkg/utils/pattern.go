@@ -10,11 +10,15 @@ type PatternParams struct {
 }
 
 // ExecuteWithMatch executes a function and matches the output to the pattern.
+// If checkMatch is false, it will return the output of the function without matching.
 // It will return the output of the function if the pattern is not set. It will
 // return the matched lines if the pattern is set. It will return an error if
 // the pattern is invalid or the function returns an error.
-func (p *PatternParams) ExecuteWithMatch(f func() ([]string, error)) ([]string, error) {
-	if p.Pattern == "" {
+func (p *PatternParams) ExecuteWithMatch(f func() ([]string, error), checkMatch bool) ([]string, error) {
+	if p.Pattern != "" && !checkMatch {
+		return nil, fmt.Errorf("pattern cannot be set (%s) when checkMatch is false", p.Pattern)
+	}
+	if p.Pattern == "" || !checkMatch {
 		return f()
 	}
 	searchPattern, err := regexp.Compile(p.Pattern)

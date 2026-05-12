@@ -8,6 +8,7 @@ import (
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	k8stypes "github.com/ovn-kubernetes/ovn-kubernetes-mcp/pkg/kubernetes/types"
 	"github.com/ovn-kubernetes/ovn-kubernetes-mcp/pkg/network-tools/types"
+	"github.com/ovn-kubernetes/ovn-kubernetes-mcp/pkg/utils"
 )
 
 const (
@@ -46,18 +47,18 @@ func (s *MCPServer) Tcpdump(ctx context.Context, req *mcp.CallToolRequest, in ty
 		return nil, types.CommandResult{}, err
 	}
 
-	cmd := newCommand("tcpdump", "-n", "-v",
+	cmd := utils.NewCommand("tcpdump", "-n", "-v",
 		"-s", strconv.Itoa(snaplen),
 		"-c", strconv.Itoa(packetCount))
-	cmd.addIfNotEmpty(in.Interface, "-i", in.Interface)
-	cmd.addIfNotEmpty(in.BPFFilter, in.BPFFilter)
+	cmd.AddIfNotEmpty(in.Interface, "-i", in.Interface)
+	cmd.AddIfNotEmpty(in.BPFFilter, in.BPFFilter)
 
 	switch in.TargetType {
 	case "node":
 		result, err := s.runDebugNode(ctx, req, k8stypes.DebugNodeParams{
 			Name:    in.NodeName,
 			Image:   s.tcpdumpImage,
-			Command: cmd.build(),
+			Command: cmd.Build(),
 		})
 		if err != nil {
 			return nil, types.CommandResult{}, err
@@ -70,7 +71,7 @@ func (s *MCPServer) Tcpdump(ctx context.Context, req *mcp.CallToolRequest, in ty
 				Namespace: in.PodNamespace,
 			},
 			Container: in.ContainerName,
-			Command:   cmd.build(),
+			Command:   cmd.Build(),
 		})
 		if err != nil {
 			return nil, types.CommandResult{}, err

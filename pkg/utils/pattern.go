@@ -10,16 +10,24 @@ type PatternParams struct {
 }
 
 // ExecuteWithMatch executes a function and matches the output to the pattern.
-// It will return the output of the function if the pattern is not set. It will
-// return the matched lines if the pattern is set. It will return an error if
-// the pattern is invalid or the function returns an error.
-func (p *PatternParams) ExecuteWithMatch(f func() ([]string, error)) ([]string, error) {
+// If checkMatch is false, a non-empty Pattern is rejected with an error because
+// pattern matching is not supported in that mode; an empty Pattern returns f()
+// unchanged. If checkMatch is true, it returns f() when Pattern is empty, or the
+// regex-matched subset of f()'s lines when Pattern is set. An error is returned
+// if the pattern is invalid or if f() fails.
+func (p *PatternParams) ExecuteWithMatch(f func() ([]string, error), checkMatch bool) ([]string, error) {
+	if !checkMatch {
+		if p.Pattern != "" {
+			return nil, fmt.Errorf("pattern matching is not supported in this mode (got pattern %q)", p.Pattern)
+		}
+		return f()
+	}
 	if p.Pattern == "" {
 		return f()
 	}
 	searchPattern, err := regexp.Compile(p.Pattern)
 	if err != nil {
-		return nil, fmt.Errorf("invalid search pattern: %w", err)
+		return nil, fmt.Errorf("invalid search pattern %q: %w", p.Pattern, err)
 	}
 
 	lines, err := f()

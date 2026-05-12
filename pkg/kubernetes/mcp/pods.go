@@ -12,7 +12,6 @@ const defaultMaxLines = 100
 
 // GetPodLogs gets the logs of a pod by name and namespace.
 func (s *MCPServer) GetPodLogs(ctx context.Context, req *mcp.CallToolRequest, in types.GetPodLogsParams) (*mcp.CallToolResult, types.GetPodLogsResult, error) {
-
 	// Match the pattern to the logs
 	lines, err := in.PatternParams.ExecuteWithMatch(func() ([]string, error) {
 		lines, err := s.clientSet.GetPodLogs(ctx, in.Namespace, in.Name, in.Container, in.Previous)
@@ -21,7 +20,7 @@ func (s *MCPServer) GetPodLogs(ctx context.Context, req *mcp.CallToolRequest, in
 		}
 		// Strip empty lines from the logs
 		return utils.StripEmptyLines(lines), nil
-	})
+	}, true)
 	if err != nil {
 		return nil, types.GetPodLogsResult{}, err
 	}
@@ -40,4 +39,20 @@ func (s *MCPServer) ExecPod(ctx context.Context, req *mcp.CallToolRequest, in ty
 	}
 
 	return nil, types.ExecPodResult{Stdout: stdout, Stderr: stderr}, nil
+}
+
+// RunCommand runs a command on a pod container by name and namespace.
+func (s *MCPServer) RunCommand(ctx context.Context, namespace, name, container string, command []string) (string, string, error) {
+	_, result, err := s.ExecPod(ctx, nil, types.ExecPodParams{
+		NamespacedNameParams: types.NamespacedNameParams{
+			Name:      name,
+			Namespace: namespace,
+		},
+		Container: container,
+		Command:   command,
+	})
+	if err != nil {
+		return "", "", err
+	}
+	return result.Stdout, result.Stderr, nil
 }

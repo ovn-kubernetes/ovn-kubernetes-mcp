@@ -5,13 +5,13 @@ import (
 	"os/exec"
 	"regexp"
 	"strings"
+
+	"github.com/ovn-kubernetes/ovn-kubernetes-mcp/pkg/utils"
 )
 
 var (
 	// kubernetesNamePattern is the pattern for Kubernetes resource names.
 	kubernetesNamePattern = regexp.MustCompile(`^[a-z0-9]([a-z0-9._-]*[a-z0-9])?$`)
-	// shellMetacharacters is the pattern for shell metacharacters.
-	shellMetacharacters = regexp.MustCompile(`[;&|$` + "`" + `<>\\()]`)
 )
 
 // getOmcCommandPath gets the path to the omc command. If the command is not found in the PATH,
@@ -43,12 +43,5 @@ func validateKubernetesName(name string, allowEmpty bool) error {
 
 // validateLabelSelector validates Kubernetes label selectors
 func validateLabelSelector(selector string) error {
-	if selector == "" {
-		return nil
-	}
-	// Basic validation - no shell metacharacters
-	if shellMetacharacters.MatchString(selector) {
-		return fmt.Errorf("invalid characters in label selector: %s", selector)
-	}
-	return nil
+	return utils.ValidateSafeString(selector, "label selector", true, utils.ShellMetaCharactersTypeAllowBrackets)
 }

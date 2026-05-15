@@ -2,12 +2,13 @@ package sosreport
 
 import (
 	"compress/gzip"
-	"os"
-	"strings"
-	"path/filepath"
-	"regexp"
 	"fmt"
 	"io"
+	"log"
+	"os"
+	"path/filepath"
+	"regexp"
+	"strings"
 )
 
 // searchPodLogs searches pod logs using the manifest to find log files
@@ -51,12 +52,12 @@ func searchPodLogs(sosreportPath, pattern, podFilter string, maxResults int) (st
 			}
 
 			if len(matches) > 0 {
-				result.WriteString(fmt.Sprintf("\n=== %s ===\n", logPath))
+				fmt.Fprintf(&result, "\n=== %s ===\n", logPath)
 				result.WriteString(matches)
 				totalMatches += len(strings.Split(matches, "\n"))
 
 				if totalMatches >= maxResults {
-					result.WriteString(fmt.Sprintf("\n... (search truncated at %d results)\n", maxResults))
+					fmt.Fprintf(&result, "\n... (search truncated at %d results)\n", maxResults)
 					return result.String(), nil
 				}
 			}
@@ -76,7 +77,12 @@ func searchInFile(filePath string, pattern *regexp.Regexp, maxLines int) (string
 	if err != nil {
 		return "", err
 	}
-	defer file.Close()
+	defer func() {
+		err := file.Close()
+		if err != nil {
+			log.Printf("failed to close file %s: %v", filePath, err)
+		}
+	}()
 
 	// Check if file is gzipped
 	var reader io.Reader = file
@@ -85,7 +91,12 @@ func searchInFile(filePath string, pattern *regexp.Regexp, maxLines int) (string
 		if err != nil {
 			return "", fmt.Errorf("failed to create gzip reader: %w", err)
 		}
-		defer gzReader.Close()
+		defer func() {
+			err := gzReader.Close()
+			if err != nil {
+				log.Printf("failed to close gzip reader %s: %v", filePath, err)
+			}
+		}()
 		reader = gzReader
 	}
 

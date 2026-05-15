@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"runtime"
 
-	. "github.com/onsi/gomega"
+	"github.com/onsi/gomega"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
@@ -14,27 +14,27 @@ import (
 func UnmarshalCallToolResult[T any](output []byte) T {
 	var result mcp.CallToolResult
 	err := result.UnmarshalJSON(output)
-	Expect(err).NotTo(HaveOccurred())
-	Expect(result.StructuredContent).NotTo(BeEmpty())
+	gomega.Expect(err).NotTo(gomega.HaveOccurred())
+	gomega.Expect(result.StructuredContent).NotTo(gomega.BeEmpty())
 
 	jsonOutput, err := json.Marshal(result.StructuredContent)
-	Expect(err).NotTo(HaveOccurred())
+	gomega.Expect(err).NotTo(gomega.HaveOccurred())
 
 	var resultInTFormat T
 	err = json.Unmarshal(jsonOutput, &resultInTFormat)
-	Expect(err).NotTo(HaveOccurred())
+	gomega.Expect(err).NotTo(gomega.HaveOccurred())
 
 	return resultInTFormat
 }
 
 func GetTestdataPath(relativePath string) string {
 	_, thisFile, _, ok := runtime.Caller(1)
-	Expect(ok).To(BeTrue())
+	gomega.Expect(ok).To(gomega.BeTrue())
 
 	path, err := filepath.Abs(filepath.Join(filepath.Dir(thisFile), relativePath))
-	Expect(err).NotTo(HaveOccurred())
+	gomega.Expect(err).NotTo(gomega.HaveOccurred())
 
 	_, err = os.Stat(path)
-	Expect(err).NotTo(HaveOccurred())
+	gomega.Expect(err).NotTo(gomega.HaveOccurred())
 	return path
 }

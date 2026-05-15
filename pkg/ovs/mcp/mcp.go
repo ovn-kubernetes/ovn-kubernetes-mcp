@@ -294,7 +294,7 @@ func (s *MCPServer) DumpFlows(ctx context.Context, req *mcp.CallToolRequest,
 	flows, err := s.runCommand(ctx, req, in.NamespacedNameParams, []string{"ovs-ofctl", "dump-flows", in.Bridge})
 	if err != nil {
 		return nil, result, fmt.Errorf("failed to dump flows for bridge %s on pod %s/%s: %w",
-			in.Bridge, in.NamespacedNameParams.Namespace, in.NamespacedNameParams.Name, err)
+			in.Bridge, in.Namespace, in.Name, err)
 	}
 
 	// Filter flows by pattern if provided
@@ -334,7 +334,7 @@ func (s *MCPServer) DumpConntrack(ctx context.Context, req *mcp.CallToolRequest,
 	entries, err := s.runCommand(ctx, req, in.NamespacedNameParams, cmd)
 	if err != nil {
 		return nil, result, fmt.Errorf("failed to dump conntrack on pod %s/%s: %w",
-			in.NamespacedNameParams.Namespace, in.NamespacedNameParams.Name, err)
+			in.Namespace, in.Name, err)
 	}
 
 	// Filter entries by pattern if provided
@@ -375,7 +375,7 @@ func (s *MCPServer) DumpOfprotoTrace(ctx context.Context, req *mcp.CallToolReque
 	lines, err := s.runCommand(ctx, req, in.NamespacedNameParams, cmd)
 	if err != nil {
 		return nil, result, fmt.Errorf("failed to trace flow on bridge %s, pod %s/%s: %w",
-			in.Bridge, in.NamespacedNameParams.Namespace, in.NamespacedNameParams.Name, err)
+			in.Bridge, in.Namespace, in.Name, err)
 	}
 
 	// Filter lines by pattern if provided

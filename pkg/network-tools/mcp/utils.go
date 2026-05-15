@@ -30,11 +30,11 @@ func (s *MCPServer) runDebugNode(ctx context.Context, req *mcp.CallToolRequest, 
 
 // runExecPod runs a command on a pod
 func (s *MCPServer) runExecPod(ctx context.Context, req *mcp.CallToolRequest, target k8stypes.ExecPodParams) (types.CommandResult, error) {
-	if target.NamespacedNameParams.Name == "" {
+	if target.Name == "" {
 		return types.CommandResult{}, fmt.Errorf("pod's name is required when target type is 'pod'")
 	}
-	if target.NamespacedNameParams.Namespace == "" {
-		target.NamespacedNameParams.Namespace = "default"
+	if target.Namespace == "" {
+		target.Namespace = "default"
 	}
 	_, output, err := s.k8sMcpServer.ExecPod(ctx, req, target)
 	if err != nil {

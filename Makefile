@@ -27,9 +27,9 @@ build:
 IMAGE ?= localhost/ovnk-mcp-server:dev
 export IMAGE
 GOLANG_IMAGE ?= quay.io/projectquay/golang
-GOLANG_VERSION ?= 1.24
+GOLANG_VERSION ?= 1.25
 KUSTOMIZE_VERSION ?= v5.8.1
-K8S_VERSION ?= v1.34.1
+K8S_VERSION ?= v1.35.1
 
 .PHONY: build-image
 build-image:
@@ -145,10 +145,10 @@ deploy-kind-ovnk:
 undeploy-kind-ovnk:
 	@$(GIT_ROOT)/hack/undeploy-kind-ovnk.sh
 
-NVM_VERSION := 0.40.3
-NODE_VERSION := 22.20.0
-NPM_VERSION := 11.6.1
-GINKGO_VERSION := v2.26.0
+NVM_VERSION := 0.40.4
+NODE_VERSION := 24.15.0
+NPM_VERSION := 11.13.0
+GINKGO_VERSION := v2.28.3
 MCP_MODE ?= live-cluster
 
 .PHONY: run-e2e

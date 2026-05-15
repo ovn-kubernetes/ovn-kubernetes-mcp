@@ -40,6 +40,10 @@ type FRRConfigurationSpec struct {
 
 // RawConfig is a snippet of raw frr configuration that gets appended to the
 // rendered configuration.
+//
+// WARNING: The RawConfig feature is UNSUPPORTED and intended ONLY FOR EXPERIMENTATION.
+// It should not be used in production environments. This feature is provided as-is without any
+// guarantees of stability, compatibility, or support. Use at your own risk.
 type RawConfig struct {
 	// Priority is the order with this configuration is appended to the
 	// bottom of the rendered configuration. A higher value means the
@@ -55,7 +59,7 @@ type RawConfig struct {
 type BGPConfig struct {
 	// Routers is the list of routers we want FRR to configure (one per VRF).
 	// +optional
-	Routers []Router `json:"routers"`
+	Routers []Router `json:"routers,omitempty"`
 	// BFDProfiles is the list of bfd profiles to be used when configuring the neighbors.
 	// +optional
 	BFDProfiles []BFDProfile `json:"bfdProfiles,omitempty"`
@@ -191,8 +195,10 @@ type Neighbor struct {
 	// +optional
 	ToReceive Receive `json:"toReceive,omitempty"`
 
-	// To set if we want to disable MP BGP that will separate IPv4 and IPv6 route exchanges into distinct BGP sessions.
-	// Deprecated: DisableMP is deprecated in favor of dualStackAddressFamily.
+	// DisableMP is no longer used and has no effect.
+	// Use DualStackAddressFamily instead to enable the neighbor for both IPv4 and IPv6 address families.
+	//
+	// Deprecated: This field is ignored. Use DualStackAddressFamily instead.
 	// +optional
 	// +kubebuilder:default:=false
 	DisableMP bool `json:"disableMP,omitempty"`

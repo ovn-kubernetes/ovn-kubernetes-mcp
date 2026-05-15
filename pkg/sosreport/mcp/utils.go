@@ -1,14 +1,14 @@
 package sosreport
 
 import (
+	"bufio"
+	"errors"
 	"fmt"
 	"io"
 	"os"
 	"path/filepath"
-	"strings"
 	"regexp"
-	"bufio"
-	"errors"
+	"strings"
 )
 
 // validateSosreportPath validates that the path looks like a sosreport directory
@@ -60,7 +60,7 @@ func readWithLimit(reader io.Reader, pattern *regexp.Regexp, maxLines int) (stri
 		}
 
 		if maxLines > 0 && lineCount >= maxLines {
-			result.WriteString(fmt.Sprintf("\n... (output truncated at %d lines)\n", maxLines))
+			fmt.Fprintf(&result, "\n... (output truncated at %d lines)\n", maxLines)
 			break
 		}
 

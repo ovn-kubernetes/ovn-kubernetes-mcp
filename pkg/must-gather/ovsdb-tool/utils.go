@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -82,8 +83,18 @@ func isWritable(path string) (bool, error) {
 		return false, fmt.Errorf("failed to create temporary file: %w", err)
 	}
 
-	defer os.Remove(file.Name())
-	defer file.Close()
+	defer func() {
+		err := os.Remove(file.Name())
+		if err != nil {
+			log.Printf("failed to remove temporary file %s: %v", file.Name(), err)
+		}
+	}()
+	defer func() {
+		err := file.Close()
+		if err != nil {
+			log.Printf("failed to close temporary file %s: %v", file.Name(), err)
+		}
+	}()
 
 	return true, nil
 }
@@ -133,13 +144,23 @@ func extractOvnDatabases(mustgatherPath string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("failed to open gz file: %w", err)
 	}
-	defer gzFile.Close()
+	defer func() {
+		err := gzFile.Close()
+		if err != nil {
+			log.Printf("failed to close gz file %s: %v", gzFile.Name(), err)
+		}
+	}()
 
 	gzReader, err := gzip.NewReader(gzFile)
 	if err != nil {
 		return "", fmt.Errorf("failed to create gzip reader: %w", err)
 	}
-	defer gzReader.Close()
+	defer func() {
+		err := gzReader.Close()
+		if err != nil {
+			log.Printf("failed to close gzip reader: %v", err)
+		}
+	}()
 
 	tarReader := tar.NewReader(gzReader)
 	for {
@@ -178,7 +199,12 @@ func extractOvnDatabases(mustgatherPath string) (string, error) {
 				if err != nil {
 					return fmt.Errorf("failed to create db file: %w", err)
 				}
-				defer dbFile.Close()
+				defer func() {
+					err := dbFile.Close()
+					if err != nil {
+						log.Printf("failed to close db file %s: %v", destPath, err)
+					}
+				}()
 				_, err = io.Copy(dbFile, tarReader)
 				if err != nil {
 					return fmt.Errorf("failed to copy db file: %w", err)

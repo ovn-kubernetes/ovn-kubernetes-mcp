@@ -99,17 +99,17 @@ func TestBuildQueryString(t *testing.T) {
 				t.Fatalf("buildQueryString() expected error but got nil")
 			}
 			if err == nil {
-				var queryJson, wantQueryJson []any
-				err = json.Unmarshal([]byte(queryString), &queryJson)
+				var queryJSON, wantQueryJSON []any
+				err = json.Unmarshal([]byte(queryString), &queryJSON)
 				if err != nil {
 					t.Fatalf("failed to unmarshal query to map: %v", err)
 				}
-				err = json.Unmarshal([]byte(test.wantQueryString), &wantQueryJson)
+				err = json.Unmarshal([]byte(test.wantQueryString), &wantQueryJSON)
 				if err != nil {
 					t.Fatalf("failed to unmarshal want query to map: %v", err)
 				}
-				if !reflect.DeepEqual(queryJson, wantQueryJson) {
-					t.Fatalf("queryJson and wantQueryJson are not equal: queryJson: %v, wantQueryJson: %v", queryJson, wantQueryJson)
+				if !reflect.DeepEqual(queryJSON, wantQueryJSON) {
+					t.Fatalf("queryJson and wantQueryJson are not equal: queryJson: %v, wantQueryJson: %v", queryJSON, wantQueryJSON)
 				}
 			}
 		})

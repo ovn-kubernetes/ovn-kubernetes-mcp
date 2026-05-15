@@ -101,9 +101,9 @@ var _ = Describe("Kubernetes Tools", func() {
 			By("Checking the data of the secret")
 			getResult := utils.UnmarshalCallToolResult[types.GetResourceResult](output)
 
-			fetchedJsonData := getResult.Resource.FormattedOutput.Data
+			fetchedJSONData := getResult.Resource.Data
 			var fetchedSecret corev1.Secret
-			err = json.Unmarshal([]byte(fetchedJsonData), &fetchedSecret)
+			err = json.Unmarshal([]byte(fetchedJSONData), &fetchedSecret)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(fetchedSecret.Data).To(Equal(data))
 		})

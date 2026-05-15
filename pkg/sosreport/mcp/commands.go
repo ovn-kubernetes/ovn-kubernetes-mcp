@@ -2,6 +2,7 @@ package sosreport
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -33,7 +34,12 @@ func getCommandOutput(sosreportPath, relativeFilepath, pattern string, maxLines 
 	if err != nil {
 		return "", fmt.Errorf("failed to open file: %w", err)
 	}
-	defer file.Close()
+	defer func() {
+		err := file.Close()
+		if err != nil {
+			log.Printf("failed to close file %s: %v", file.Name(), err)
+		}
+	}()
 
 	var searchPattern *regexp.Regexp
 	if pattern != "" {

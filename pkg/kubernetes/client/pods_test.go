@@ -52,9 +52,9 @@ func (e *fakeExecutor) ExecuteWithContext(ctx context.Context, url *url.URL, con
 	command := url.Query().Get("command")
 	switch command {
 	case string(successExecCommand):
-		stdout.Write([]byte("Successfully executed command"))
+		_, e.execErr = stdout.Write([]byte("Successfully executed command"))
 	case string(failureExecCommand):
-		stderr.Write([]byte("Failed to execute command"))
+		_, e.execErr = stderr.Write([]byte("Failed to execute command"))
 	case string(errorExecCommand):
 		e.execErr = fmt.Errorf("exec error")
 	}

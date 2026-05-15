@@ -1,0 +1,15 @@
+version: "2"
+
+linters:
+  enable:
+    - errcheck
+    - govet
+    - ineffassign
+    - unused
+    - staticcheck
+  settings:
+    staticcheck:
+      checks:
+        - "all"
+        - "-QF1008" # ignore embedded fields
+        - "-ST1000" # ignore package comment

@@ -13,7 +13,12 @@ func TestReadWithLimit(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer os.Remove(tmpfile.Name())
+	defer func() {
+		err := os.Remove(tmpfile.Name())
+		if err != nil {
+			t.Fatalf("failed to remove temporary file %s: %v", tmpfile.Name(), err)
+		}
+	}()
 
 	// Write test content
 	testContent := `line 1: ERROR occurred
@@ -30,7 +35,10 @@ line 10: DEBUG more
 	if _, err := tmpfile.Write([]byte(testContent)); err != nil {
 		t.Fatal(err)
 	}
-	tmpfile.Close()
+	err = tmpfile.Close()
+	if err != nil {
+		t.Fatalf("failed to close temporary file %s: %v", tmpfile.Name(), err)
+	}
 
 	tests := []struct {
 		name        string
@@ -86,7 +94,12 @@ line 10: DEBUG more
 			if err != nil {
 				t.Fatal(err)
 			}
-			defer file.Close()
+			defer func() {
+				err := file.Close()
+				if err != nil {
+					t.Errorf("failed to close file %s: %v", file.Name(), err)
+				}
+			}()
 
 			var searchPattern *regexp.Regexp
 			if tt.pattern != "" {

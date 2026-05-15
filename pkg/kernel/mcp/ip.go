@@ -55,7 +55,7 @@ func validateIPCommand(ipCommand string) error {
 	if len(splitCommand) < 2 {
 		return fmt.Errorf("invalid ip command: %s", ipCommand)
 	}
-	validIpCommand := map[string]bool{
+	validIPCommand := map[string]bool{
 		"address":     true,
 		"link":        true,
 		"neighbour":   true,
@@ -73,7 +73,7 @@ func validateIPCommand(ipCommand string) error {
 	}
 
 	var valid bool
-	for command := range validIpCommand {
+	for command := range validIPCommand {
 		commandFields := strings.Fields(command)
 		// Check if the input command matches the expected command pattern
 		// For single-word commands like "address", we check: splitCommand[0] matches "address" and splitCommand[1] matches "show"

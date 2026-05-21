@@ -8,7 +8,7 @@ import (
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	k8stypes "github.com/ovn-kubernetes/ovn-kubernetes-mcp/pkg/kubernetes/types"
 	"github.com/ovn-kubernetes/ovn-kubernetes-mcp/pkg/network-tools/types"
-	"github.com/ovn-kubernetes/ovn-kubernetes-mcp/pkg/utils"
+	"github.com/ovn-kubernetes/ovn-kubernetes-mcp/pkg/utils/commandbuilder"
 )
 
 const (
@@ -47,7 +47,7 @@ func (s *MCPServer) Tcpdump(ctx context.Context, req *mcp.CallToolRequest, in ty
 		return nil, types.CommandResult{}, err
 	}
 
-	cmd := utils.NewCommand("tcpdump", "-n", "-v",
+	cmd := commandbuilder.NewCommand("tcpdump", "-n", "-v",
 		"-s", strconv.Itoa(snaplen),
 		"-c", strconv.Itoa(packetCount))
 	cmd.AddIfNotEmpty(in.Interface, "-i", in.Interface)

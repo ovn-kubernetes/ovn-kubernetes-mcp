@@ -9,6 +9,7 @@ import (
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"github.com/ovn-kubernetes/ovn-kubernetes-mcp/pkg/kernel/types"
 	"github.com/ovn-kubernetes/ovn-kubernetes-mcp/pkg/utils"
+	"github.com/ovn-kubernetes/ovn-kubernetes-mcp/pkg/utils/commandbuilder"
 )
 
 // GetNFT MCP handler for nftables operations.
@@ -31,7 +32,7 @@ func (s *MCPServer) GetNFT(ctx context.Context, req *mcp.CallToolRequest, in typ
 
 	command := strings.TrimSpace(in.Command)
 	addressFamilies := strings.TrimSpace(in.AddressFamilies)
-	cmd := utils.NewCommand("nft")
+	cmd := commandbuilder.NewCommand("nft")
 	cmd.Add(strings.Fields(command)...)
 	cmd.AddIf(addressFamilies != "", addressFamilies)
 

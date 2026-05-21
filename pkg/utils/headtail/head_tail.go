@@ -1,4 +1,4 @@
-package utils
+package headtail
 
 // HeadTailParams is a type that contains the head and tail parameters.
 type HeadTailParams struct {

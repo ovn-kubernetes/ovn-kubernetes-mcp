@@ -8,6 +8,7 @@ import (
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	ovntypes "github.com/ovn-kubernetes/ovn-kubernetes-mcp/pkg/ovn/types"
 	"github.com/ovn-kubernetes/ovn-kubernetes-mcp/pkg/utils"
+	"github.com/ovn-kubernetes/ovn-kubernetes-mcp/pkg/utils/ovndb"
 )
 
 type RunPodExecCommandFuncType func(ctx context.Context, namespace, name, container string, command []string) (string, string, error)
@@ -222,7 +223,7 @@ func (s *MCPServer) Get(ctx context.Context, req *mcp.CallToolRequest,
 	if err := validateDatabase(in.Database); err != nil {
 		return nil, result, err
 	}
-	if err := utils.ValidateOVNTableName(in.Table); err != nil {
+	if err := ovndb.ValidateOVNTableName(in.Table); err != nil {
 		return nil, result, err
 	}
 	if err := validateColumnSpec(in.Columns); err != nil {

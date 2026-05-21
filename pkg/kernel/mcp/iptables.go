@@ -9,6 +9,7 @@ import (
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"github.com/ovn-kubernetes/ovn-kubernetes-mcp/pkg/kernel/types"
 	"github.com/ovn-kubernetes/ovn-kubernetes-mcp/pkg/utils"
+	"github.com/ovn-kubernetes/ovn-kubernetes-mcp/pkg/utils/commandbuilder"
 )
 
 // GetIptables MCP handler for iptables operations.
@@ -33,7 +34,7 @@ func (s *MCPServer) GetIptables(ctx context.Context, req *mcp.CallToolRequest, i
 
 	table := strings.TrimSpace(in.Table)
 	command := strings.TrimSpace(in.Command)
-	cmd := utils.NewCommand(iptablesCommand(in.FilterParameters))
+	cmd := commandbuilder.NewCommand(iptablesCommand(in.FilterParameters))
 	// Defaults to 'filter' table when not specified
 	cmd.AddIf(table == "", "-t", "filter")
 	cmd.AddIfNotEmpty(table, "-t", table)

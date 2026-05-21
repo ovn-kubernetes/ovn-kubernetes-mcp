@@ -9,6 +9,7 @@ import (
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"github.com/ovn-kubernetes/ovn-kubernetes-mcp/pkg/kernel/types"
 	"github.com/ovn-kubernetes/ovn-kubernetes-mcp/pkg/utils"
+	"github.com/ovn-kubernetes/ovn-kubernetes-mcp/pkg/utils/commandbuilder"
 )
 
 const conntrackSystemFile = "/proc/net/nf_conntrack"
@@ -49,7 +50,7 @@ func (s *MCPServer) GetConntrack(ctx context.Context, req *mcp.CallToolRequest, 
 
 // getConntrackUsingCLI executes conntrack CLI commands.
 func (s *MCPServer) getConntrackUsingCLI(ctx context.Context, req *mcp.CallToolRequest, node, command, filterParameters string) (string, error) {
-	cmd := utils.NewCommand("conntrack")
+	cmd := commandbuilder.NewCommand("conntrack")
 	switch command {
 	case "-L", "--dump":
 		cmd.Add(command)
@@ -68,7 +69,7 @@ func (s *MCPServer) getConntrackUsingCLI(ctx context.Context, req *mcp.CallToolR
 // getConntrackFromFile parses /proc/net/nf_conntrack directly.
 // TODO: Add filter support while getting conntrack entries from /proc/net/nf_conntrack.
 func (s *MCPServer) getConntrackFromFile(ctx context.Context, req *mcp.CallToolRequest, node string) (string, error) {
-	cmd := utils.NewCommand("cat")
+	cmd := commandbuilder.NewCommand("cat")
 	cmd.Add(conntrackSystemFile)
 	return s.executeCommand(ctx, req, node, cmd.Build())
 }

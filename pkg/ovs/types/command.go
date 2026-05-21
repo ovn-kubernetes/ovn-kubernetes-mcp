@@ -2,7 +2,8 @@ package types
 
 import (
 	k8stypes "github.com/ovn-kubernetes/ovn-kubernetes-mcp/pkg/kubernetes/types"
-	"github.com/ovn-kubernetes/ovn-kubernetes-mcp/pkg/utils"
+	"github.com/ovn-kubernetes/ovn-kubernetes-mcp/pkg/utils/headtail"
+	"github.com/ovn-kubernetes/ovn-kubernetes-mcp/pkg/utils/pattern"
 )
 
 // BridgeResult contains the list of OVS bridges found on a node.
@@ -13,7 +14,7 @@ type BridgeResult struct {
 // ShowParams are the parameters for ovs-vsctl show command.
 type ShowParams struct {
 	k8stypes.NamespacedNameParams
-	utils.HeadTailParams
+	headtail.HeadTailParams
 }
 
 // ShowResult contains the output of ovs-vsctl show command.
@@ -46,15 +47,15 @@ type ConntrackResult struct {
 type GetOVSCommandParams struct {
 	k8stypes.NamespacedNameParams
 	Bridge string `json:"bridge"`
-	utils.PatternParams
-	utils.HeadTailParams
+	pattern.PatternParams
+	headtail.HeadTailParams
 }
 
 // DumpConntrackParams are the parameters for dump-conntrack command.
 type DumpConntrackParams struct {
 	k8stypes.NamespacedNameParams
-	utils.PatternParams
-	utils.HeadTailParams
+	pattern.PatternParams
+	headtail.HeadTailParams
 	AdditionalParams []string `json:"additional_params,omitempty"`
 }
 
@@ -63,8 +64,8 @@ type OfprotoTraceParams struct {
 	k8stypes.NamespacedNameParams
 	Bridge string `json:"bridge"`
 	Flow   string `json:"flow"`
-	utils.PatternParams
-	utils.HeadTailParams
+	pattern.PatternParams
+	headtail.HeadTailParams
 }
 
 // OfprotoTraceResult returns the complete trace output.

@@ -7,7 +7,7 @@ import (
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	k8stypes "github.com/ovn-kubernetes/ovn-kubernetes-mcp/pkg/kubernetes/types"
 	"github.com/ovn-kubernetes/ovn-kubernetes-mcp/pkg/network-tools/types"
-	"github.com/ovn-kubernetes/ovn-kubernetes-mcp/pkg/utils"
+	"github.com/ovn-kubernetes/ovn-kubernetes-mcp/pkg/utils/commandbuilder"
 )
 
 const (
@@ -31,7 +31,7 @@ func (s *MCPServer) Pwru(ctx context.Context, req *mcp.CallToolRequest, in types
 		return nil, types.CommandResult{}, err
 	}
 
-	cmd := utils.NewCommand("pwru", "--output-limit-lines", strconv.Itoa(outputLimitLines))
+	cmd := commandbuilder.NewCommand("pwru", "--output-limit-lines", strconv.Itoa(outputLimitLines))
 	// pwru accepts pcap filter as positional argument(s)
 	cmd.AddIfNotEmpty(in.BPFFilter, in.BPFFilter)
 

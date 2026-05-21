@@ -9,6 +9,7 @@ import (
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"github.com/ovn-kubernetes/ovn-kubernetes-mcp/pkg/kernel/types"
 	"github.com/ovn-kubernetes/ovn-kubernetes-mcp/pkg/utils"
+	"github.com/ovn-kubernetes/ovn-kubernetes-mcp/pkg/utils/commandbuilder"
 )
 
 // GetIPCommandOutput MCP handler for ip utility operations.
@@ -30,7 +31,7 @@ func (s *MCPServer) GetIPCommandOutput(ctx context.Context, req *mcp.CallToolReq
 		return nil, types.Result{}, fmt.Errorf("error while getting ip data: %w", err)
 	}
 
-	cmd := utils.NewCommand("ip")
+	cmd := commandbuilder.NewCommand("ip")
 	cmd.AddIfNotEmpty(in.Options, strings.Fields(in.Options)...)
 	cmd.Add(strings.Fields(in.Command)...)
 	cmd.AddIfNotEmpty(in.FilterParameters, strings.Fields(in.FilterParameters)...)

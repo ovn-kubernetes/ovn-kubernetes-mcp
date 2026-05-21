@@ -7,7 +7,7 @@ import (
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	k8stypes "github.com/ovn-kubernetes/ovn-kubernetes-mcp/pkg/kubernetes/types"
-	"github.com/ovn-kubernetes/ovn-kubernetes-mcp/pkg/utils"
+	"github.com/ovn-kubernetes/ovn-kubernetes-mcp/pkg/utils/commandbuilder"
 )
 
 const (
@@ -17,7 +17,7 @@ const (
 
 // utilityExists checks if a utility/command exists in the container
 func (s *MCPServer) utilityExists(ctx context.Context, req *mcp.CallToolRequest, node, utility string) error {
-	cmd := utils.NewCommand(utility, "-V")
+	cmd := commandbuilder.NewCommand(utility, "-V")
 	debugParameter := k8stypes.DebugNodeParams{Name: node, Image: s.cfg.Image, Command: cmd.Build()}
 	_, result, err := s.k8sMcpServer.DebugNode(ctx, req, debugParameter)
 	if err != nil {

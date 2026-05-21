@@ -1,4 +1,4 @@
-package utils
+package ovndb
 
 import "testing"
 

@@ -39,6 +39,11 @@ spec:
             - --host=0.0.0.0
             - --port=8080
             - --mode=live-cluster
+            # Optional: hide tools or whole categories from MCP clients. Filtering
+            # happens at the protocol layer; omitting these exposes all tools.
+            # See "Selectively exposing tools" in README.md for details.
+            # - --disable-categories=kernel,network-tools
+            # - --disable-tools=tcpdump,pwru
           ports:
             - name: http
               containerPort: 8080

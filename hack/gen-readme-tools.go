@@ -12,31 +12,18 @@ import (
 	"go/token"
 	"os"
 	"path/filepath"
-	"regexp"
-	"strconv"
 	"strings"
+
+	"github.com/ovn-kubernetes/ovn-kubernetes-mcp/pkg/utils/mcptools"
 )
 
 const (
 	mainPath   = "cmd/ovnk-mcp-server/main.go"
 	readmeName = "README.md"
-	// Sentinel for literal %% in format strings (multi-rune to avoid NUL and collisions with real text).
-	formatVerbSentinel = "\uE000\uE001"
 )
-
-var (
-	reFirstSentence = regexp.MustCompile(`^(.*?\.\s)`)
-	rePeriodAtEnd   = regexp.MustCompile(`^(.*\.)$`)
-	reFormatVerb    = regexp.MustCompile(`%[0-9.*+# \-]*[a-zA-Z]`)
-)
-
-type tool struct {
-	name        string
-	description string
-}
 
 func main() {
-	repoRoot, err := findRepoRoot()
+	repoRoot, err := mcptools.FindRepoRoot()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "find repo root: %v\n", err)
 		os.Exit(1)
@@ -51,15 +38,15 @@ func main() {
 		os.Exit(1)
 	}
 
-	liveTools := make(map[string][]tool)
-	offlineTools := make(map[string][]tool)
+	liveTools := make(map[string][]mcptools.Tool)
+	offlineTools := make(map[string][]mcptools.Tool)
 
 	for _, pkgName := range liveOrder {
 		mcpPath := filepath.Join(pkgDir, pkgName, "mcp", "mcp.go")
 		if _, err := os.Stat(mcpPath); os.IsNotExist(err) {
 			continue
 		}
-		tools, err := extractTools(mcpPath)
+		tools, err := mcptools.ExtractTools(mcpPath)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "warning: %s: %v\n", mcpPath, err)
 			continue
@@ -71,7 +58,7 @@ func main() {
 		if _, err := os.Stat(mcpPath); os.IsNotExist(err) {
 			continue
 		}
-		tools, err := extractTools(mcpPath)
+		tools, err := mcptools.ExtractTools(mcpPath)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "warning: %s: %v\n", mcpPath, err)
 			continue
@@ -94,7 +81,7 @@ func main() {
 			if i > 0 {
 				prefix = "| |"
 			}
-			fmt.Fprintf(&out, "%s `%s` | %s |\n", prefix, t.name, escapeTableCell(t.description))
+			fmt.Fprintf(&out, "%s `%s` | %s |\n", prefix, t.Name, escapeTableCell(t.Description))
 		}
 	}
 	fmt.Fprintln(&out)
@@ -110,7 +97,7 @@ func main() {
 			if i > 0 {
 				prefix = "| |"
 			}
-			fmt.Fprintf(&out, "%s `%s` | %s |\n", prefix, t.name, escapeTableCell(t.description))
+			fmt.Fprintf(&out, "%s `%s` | %s |\n", prefix, t.Name, escapeTableCell(t.Description))
 		}
 	}
 	generated := out.String()
@@ -119,24 +106,6 @@ func main() {
 		os.Exit(1)
 	}
 	fmt.Fprintf(os.Stderr, "Updated %s\n", readmePath)
-}
-
-// findRepoRoot returns the directory that contains go.mod.
-func findRepoRoot() (string, error) {
-	dir, err := os.Getwd()
-	if err != nil {
-		return "", err
-	}
-	for {
-		if _, err := os.Stat(filepath.Join(dir, "go.mod")); err == nil {
-			return dir, nil
-		}
-		parent := filepath.Dir(dir)
-		if parent == dir {
-			return "", fmt.Errorf("go.mod not found")
-		}
-		dir = parent
-	}
 }
 
 // inferModesFromMain parses main.go and returns package names in order of first use in setupLiveCluster and setupOffline.
@@ -150,7 +119,7 @@ func inferModesFromMain(mainPath string) (liveOrder, offlineOrder []string, err 
 	importAliasToPkg := make(map[string]string)
 	trim := "ovn-kubernetes-mcp/pkg/"
 	for _, imp := range node.Imports {
-		path := unquoteString(imp.Path.Value)
+		path := mcptools.UnquoteString(imp.Path.Value)
 		idx := strings.Index(path, trim)
 		if idx == -1 {
 			continue
@@ -221,140 +190,12 @@ func collectPackagesInOrder(block *ast.BlockStmt, aliasToPkg map[string]string) 
 	return order
 }
 
-// firstLine extracts the first line of a description, trimmed and ending at first period if present.
-func firstLine(s string) string {
-	s = strings.TrimSpace(s)
-	// Take first line (up to newline)
-	if idx := strings.Index(s, "\n"); idx != -1 {
-		s = s[:idx]
-	}
-	s = strings.TrimSpace(s)
-	// Take first sentence: stop at ". " or "." at end-of-string
-	if m := reFirstSentence.FindStringSubmatch(s); len(m) > 1 {
-		return strings.TrimSpace(m[1])
-	}
-	// If no ". " found, try period at end of string
-	if m := rePeriodAtEnd.FindStringSubmatch(s); len(m) > 1 {
-		return strings.TrimSpace(m[1])
-	}
-	return s
-}
-
-// extractTools parses the given mcpPath file and returns all MCP tools registered
-// via mcp.AddTool(server, &mcp.Tool{...}). Each tool's description is shortened to
-// the first line or first sentence for the README table. Each tool's short description
-// should be provided in the first line or sentence for this function to work correctly.
-func extractTools(mcpPath string) ([]tool, error) {
-	fset := token.NewFileSet()
-	node, err := parser.ParseFile(fset, mcpPath, nil, parser.ParseComments)
-	if err != nil {
-		return nil, err
-	}
-	var tools []tool
-	ast.Inspect(node, func(n ast.Node) bool {
-		call, ok := n.(*ast.CallExpr)
-		if !ok || len(call.Args) < 2 {
-			return true
-		}
-		// Check for mcp.AddTool(server, &mcp.Tool{...})
-		sel, ok := call.Fun.(*ast.SelectorExpr)
-		if !ok || sel.Sel.Name != "AddTool" {
-			return true
-		}
-		ident, ok := sel.X.(*ast.Ident)
-		if !ok || ident.Name != "mcp" {
-			return true
-		}
-		unary, ok := call.Args[1].(*ast.UnaryExpr)
-		if !ok || unary.Op != token.AND {
-			return true
-		}
-		lit, ok := unary.X.(*ast.CompositeLit)
-		if !ok {
-			return true
-		}
-		var name, desc string
-		for _, elt := range lit.Elts {
-			kv, ok := elt.(*ast.KeyValueExpr)
-			if !ok {
-				continue
-			}
-			keyIdent, ok := kv.Key.(*ast.Ident)
-			if !ok {
-				continue
-			}
-			switch keyIdent.Name {
-			case "Name":
-				if bl, ok := kv.Value.(*ast.BasicLit); ok && bl.Kind == token.STRING {
-					name = unquoteString(bl.Value)
-				}
-			case "Description":
-				desc = extractDescription(kv.Value)
-			}
-		}
-		if name != "" {
-			tools = append(tools, tool{name: name, description: firstLine(desc)})
-		}
-		return true
-	})
-	return tools, nil
-}
-
-// extractDescription returns the string value of a Tool's Description field from the AST.
-// It handles dual plain string literals and fmt.Sprintf(format, ...) calls; format verbs
-// in the latter are stripped.
-func extractDescription(expr ast.Expr) string {
-	switch v := expr.(type) {
-	case *ast.BasicLit:
-		if v.Kind == token.STRING {
-			return unquoteString(v.Value)
-		}
-	case *ast.CallExpr:
-		// fmt.Sprintf(`...`, ...) - first argument is format string; replace format verbs so they don't appear literally in README
-		if len(v.Args) >= 1 {
-			if bl, ok := v.Args[0].(*ast.BasicLit); ok && bl.Kind == token.STRING {
-				return stripFormatVerbs(unquoteString(bl.Value))
-			}
-		}
-	}
-	return ""
-}
-
-// stripFormatVerbs replaces Go format verbs (e.g. %d, %s) with placeholders so format strings
-// from fmt.Sprintf read naturally in the README.
-func stripFormatVerbs(s string) string {
-	// Replace %% with a sentinel so we don't touch literal percents (multi-rune to avoid NUL and collisions)
-	s = strings.ReplaceAll(s, "%%", formatVerbSentinel)
-	s = reFormatVerb.ReplaceAllString(s, "N")
-	s = strings.ReplaceAll(s, formatVerbSentinel, "%")
-	return s
-}
-
 // escapeTableCell escapes content for use in a markdown table cell so that | and newlines don't
 // break the table.
 func escapeTableCell(s string) string {
 	s = strings.ReplaceAll(s, "|", "&#124;")
 	s = strings.ReplaceAll(s, "\n", " ")
 	return strings.TrimSpace(s)
-}
-
-// unquoteString removes surrounding backticks or double quotes from a Go string literal.
-// It uses strconv.Unquote to handle escape sequences. Returns the unquoted string or the
-// original string if unquoting fails.
-func unquoteString(s string) string {
-	s = strings.TrimSpace(s)
-	if len(s) >= 2 && s[0] == '`' && s[len(s)-1] == '`' {
-		return s[1 : len(s)-1]
-	}
-	if len(s) >= 2 && (s[0] == '"' && s[len(s)-1] == '"') {
-		// Try to unquote using strconv.Unquote for escape sequences. If it fails,
-		// use simple unquote.
-		if u, err := strconv.Unquote(s); err == nil {
-			return u
-		}
-		return s[1 : len(s)-1]
-	}
-	return s
 }
 
 // readREADME reads and returns the full contents of the file at path.

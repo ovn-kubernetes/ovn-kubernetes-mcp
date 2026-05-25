@@ -4,10 +4,13 @@ import (
 	"context"
 	"flag"
 	"log"
+	"maps"
 	"net"
 	"net/http"
 	"os"
 	"os/signal"
+	"slices"
+	"strings"
 	"syscall"
 	"time"
 
@@ -15,6 +18,7 @@ import (
 	kernelmcp "github.com/ovn-kubernetes/ovn-kubernetes-mcp/pkg/kernel/mcp"
 	kubernetesmcp "github.com/ovn-kubernetes/ovn-kubernetes-mcp/pkg/kubernetes/mcp"
 	"github.com/ovn-kubernetes/ovn-kubernetes-mcp/pkg/middleware"
+	"github.com/ovn-kubernetes/ovn-kubernetes-mcp/pkg/middleware/toolfilter"
 	mustgathermcp "github.com/ovn-kubernetes/ovn-kubernetes-mcp/pkg/must-gather/mcp"
 	nettoolsmcp "github.com/ovn-kubernetes/ovn-kubernetes-mcp/pkg/network-tools/mcp"
 	ovnmcp "github.com/ovn-kubernetes/ovn-kubernetes-mcp/pkg/ovn/mcp"
@@ -25,15 +29,16 @@ import (
 const defaultNetshootImage = "nicolaka/netshoot:v0.15"
 
 type MCPServerConfig struct {
-	Mode         string
-	Transport    string
-	Host         string
-	Port         string
-	PwruImage    string
-	TcpdumpImage string
-	Kernel       kernelmcp.Config
-	Kubernetes   kubernetesmcp.Config
-	ToolTimeout  time.Duration
+	Mode          string
+	Transport     string
+	Host          string
+	Port          string
+	PwruImage     string
+	TcpdumpImage  string
+	Kernel        kernelmcp.Config
+	Kubernetes    kubernetesmcp.Config
+	ToolTimeout   time.Duration
+	DisabledTools map[string]bool
 }
 
 // setupLiveCluster sets up the live cluster mode.
@@ -94,6 +99,13 @@ func main() {
 	// Apply timeout middleware to all tool calls if configured.
 	if serverCfg.ToolTimeout > 0 {
 		ovnkMcpServer.AddReceivingMiddleware(middleware.ToolTimeout(serverCfg.ToolTimeout))
+	}
+
+	// Hide tools/categories that the operator opted out of. Filtering happens
+	// at the protocol layer so every category's registration code stays
+	// unchanged; a nil/empty set makes the middleware a no-op.
+	if len(serverCfg.DisabledTools) > 0 {
+		ovnkMcpServer.AddReceivingMiddleware(toolfilter.ToolFilter(serverCfg.DisabledTools))
 	}
 
 	// Setup the MCP server based on the mode.
@@ -164,7 +176,11 @@ func main() {
 
 func parseFlags() *MCPServerConfig {
 	cfg := &MCPServerConfig{}
-	var timeoutSeconds int
+	var (
+		timeoutSeconds     int
+		disabledCategories string
+		disabledTools      string
+	)
 
 	flag.StringVar(&cfg.Mode, "mode", "live-cluster", "Mode of debugging: live-cluster or offline or dual")
 	flag.StringVar(&cfg.Transport, "transport", "stdio", "Transport to use: stdio or http")
@@ -176,6 +192,10 @@ func parseFlags() *MCPServerConfig {
 	flag.StringVar(&cfg.TcpdumpImage, "tcpdump-image", defaultNetshootImage, "Container image for tcpdump operations")
 	flag.StringVar(&cfg.Kernel.Image, "kernel-image", defaultNetshootImage, "Container image for kernel operations")
 	flag.IntVar(&timeoutSeconds, "tool-timeout", 120, "Timeout in seconds for tool operations (0 to disable)")
+	flag.StringVar(&disabledCategories, "disable-categories", "",
+		"Comma-separated tool categories to hide from clients (valid categories: "+strings.Join(toolfilter.Categories(), ",")+")")
+	flag.StringVar(&disabledTools, "disable-tools", "",
+		"Comma-separated tool names to hide from clients (e.g. tcpdump,pwru)")
 	flag.Parse()
 
 	// Convert timeout to duration and apply limits
@@ -189,6 +209,15 @@ func parseFlags() *MCPServerConfig {
 		log.Println("Tool timeout enforcement disabled")
 	} else {
 		log.Printf("Tool timeout: %v", cfg.ToolTimeout)
+	}
+
+	disabled, err := toolfilter.ResolveDisabled(disabledCategories, disabledTools)
+	if err != nil {
+		log.Fatalf("Invalid tool filter configuration: %v", err)
+	}
+	cfg.DisabledTools = disabled
+	if len(disabled) > 0 {
+		log.Printf("Hiding %d tool(s) from clients: %s", len(disabled), strings.Join(slices.Sorted(maps.Keys(disabled)), ","))
 	}
 
 	return cfg

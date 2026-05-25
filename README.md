@@ -12,6 +12,7 @@ Repo hosting the Model Context Protocol Server for troubleshooting OVN-Kubernete
   - [Dual Mode](#dual-mode)
   - [Local development](#local-development)
   - [Kubernetes deployment](#kubernetes-deployment)
+- [Selectively exposing tools](#selectively-exposing-tools)
 - [Tools available in MCP Server](#tools-available-in-mcp-server)
   - [Live Cluster Mode](#live-cluster-mode-1)
   - [Offline Mode](#offline-mode-1)
@@ -47,6 +48,8 @@ The server currently supports 2 transport modes: `stdio` and `http`.
 | `--tcpdump-image` | `nicolaka/netshoot:v0.15`       | Container image for the **tcpdump** network tool (packet capture). |
 | `--kernel-image` | `nicolaka/netshoot:v0.15`       | Container image for kernel tools (conntrack, ip, iptables, nft). |
 | `--tool-timeout` | `120`                           | Timeout in seconds for tool operations. Set to `0` to disable. |
+| `--disable-categories` | (none)                          | Comma-separated tool categories to hide from clients (valid: `kernel`, `kubernetes`, `must-gather`, `network-tools`, `ovn`, `ovs`, `sosreport`). See [Selectively exposing tools](#selectively-exposing-tools). |
+| `--disable-tools` | (none)                          | Comma-separated tool names to hide from clients (e.g. `tcpdump,pwru`). See [Selectively exposing tools](#selectively-exposing-tools). |
 
 ### Live Cluster Mode
 
@@ -247,6 +250,47 @@ spec:
 ```
 
 From that client pod, call the Service at `http://ovnk-mcp-server.ovn-kubernetes-mcp.svc:8080` (or the fully qualified `*.svc.cluster.local` name). If the client runs in **another** namespace, use a `from` entry with both `namespaceSelector` and `podSelector` as described under [Targeting multiple namespaces by label](https://kubernetes.io/docs/concepts/services-networking/network-policies/#targeting-multiple-namespaces-by-label). Prefer explicit labels over wide selectors, and keep trusting this path only for workloads you control—there is still no MCP-level authentication on the wire.
+
+---
+
+## Selectively exposing tools
+
+By default the server registers every tool listed in [Tools available in MCP Server](#tools-available-in-mcp-server). Two CLI flags let you hide specific categories or individual tools so clients never see them in `tools/list` and any direct `tools/call` against them is rejected:
+
+| Flag | Example | Effect |
+|------|---------|--------|
+| `--disable-categories` | `--disable-categories=kernel,network-tools` | Hides every tool registered by the listed categories. Categories are the bold headings in the tool table below (`ovn`, `ovs`, `kubernetes`, `kernel`, `network-tools`, `sosreport`, `must-gather`). Unknown category names cause the server to refuse to start. |
+| `--disable-tools` | `--disable-tools=tcpdump,pwru` | Hides individual tools by their registered name (the value in the `Tool` column below). Unknown tool names cause the server to refuse to start, the same as unknown categories. |
+
+The two flags can be combined; the union of their resolved tool names is hidden. The startup log line `Hiding N tool(s) from clients: ...` lists the final set so you can verify the configuration.
+
+Filtering happens at the MCP protocol layer (in middleware), so tools are still registered with the server but never advertised to or callable by clients. Backwards compatible: omitting both flags exposes all tools as before.
+
+**Examples**
+
+Production-leaning: drop packet capture and the wider kernel toolset.
+
+```shell
+ovnk-mcp-server --disable-tools=tcpdump,pwru --disable-categories=kernel
+```
+
+Restrict to OVN/OVS introspection and basic Kubernetes lookups.
+
+```shell
+ovnk-mcp-server --disable-categories=kernel,network-tools,must-gather,sosreport
+```
+
+In a Kubernetes manifest the same options go straight into the container `args`:
+
+```yaml
+args:
+  - --transport=http
+  - --host=0.0.0.0
+  - --port=8080
+  - --mode=live-cluster
+  - --disable-tools=tcpdump,pwru
+  - --disable-categories=kernel
+```
 
 ---
 

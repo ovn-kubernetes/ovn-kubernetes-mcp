@@ -1,0 +1,43 @@
+OVN-Kubernetes MCP Server has been deployed!
+
+  Release:    {{ .Release.Name }}
+  Namespace:  {{ .Values.namespace }}
+  Mode:       {{ .Values.mcpServer.mode }}
+  Transport:  {{ .Values.mcpServer.transport }}
+  Service:    {{ include "ovnk-mcp-server.fullname" . }} (port {{ .Values.service.port }})
+
+Quick health check (run on any cluster node, no port-forward needed):
+
+  CLUSTER_IP=$(kubectl get svc -n {{ .Values.namespace }} {{ include "ovnk-mcp-server.fullname" . }} -o jsonpath='{.spec.clusterIP}')
+  curl -i http://${CLUSTER_IP}:{{ .Values.service.port }}/
+
+To use the MCP server from a client, choose one of:
+
+A) From the workstation where you run kubectl
+   ------------------------------------------------------------------
+   kubectl port-forward -n {{ .Values.namespace }} svc/{{ include "ovnk-mcp-server.fullname" . }} {{ .Values.service.port }}:{{ .Values.service.port }}
+
+   # then point your MCP client at:
+   http://127.0.0.1:{{ .Values.service.port }}
+
+   Note: 'localhost' here means the machine running kubectl, NOT your
+   laptop if you ran the install through ssh on a control-plane node.
+
+B) From your laptop when kubectl runs on a remote bastion
+   ------------------------------------------------------------------
+   # Two ports forwarded back-to-back: laptop -> bastion -> service.
+   ssh -L {{ .Values.service.port }}:127.0.0.1:{{ .Values.service.port }} <bastion> \
+     "kubectl port-forward -n {{ .Values.namespace }} svc/{{ include "ovnk-mcp-server.fullname" . }} {{ .Values.service.port }}:{{ .Values.service.port }}"
+
+   # then on your laptop, point your MCP client at:
+   http://127.0.0.1:{{ .Values.service.port }}
+
+Cursor MCP config (add to ~/.cursor/mcp.json on your laptop after option A or B):
+
+  {
+    "mcpServers": {
+      "{{ .Release.Name }}": {
+        "url": "http://127.0.0.1:{{ .Values.service.port }}"
+      }
+    }
+  }

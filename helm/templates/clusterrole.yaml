@@ -1,0 +1,42 @@
+{{- if .Values.rbac.create -}}
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ include "ovnk-mcp-server.fullname" . }}
+  labels:
+    {{- include "ovnk-mcp-server.labels" . | nindent 4 }}
+rules:
+  # Pods: get, list, create, delete (needed for exec, logs, and debug pods)
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["get", "list", "create", "delete"]
+  # Pod logs
+  - apiGroups: [""]
+    resources: ["pods/log"]
+    verbs: ["get"]
+  # Pod exec (OVN/OVS/kernel commands)
+  - apiGroups: [""]
+    resources: ["pods/exec"]
+    verbs: ["create"]
+  # Nodes, services, and other core resources (resource-get/list tools)
+  - apiGroups: [""]
+    resources:
+      - "nodes"
+      - "services"
+      - "namespaces"
+      - "configmaps"
+      - "endpoints"
+      - "events"
+      - "persistentvolumeclaims"
+      - "serviceaccounts"
+      - "replicationcontrollers"
+    verbs: ["get", "list"]
+  # Apps API resources (resource-get/list tools)
+  - apiGroups: ["apps"]
+    resources:
+      - "deployments"
+      - "replicasets"
+      - "statefulsets"
+      - "daemonsets"
+    verbs: ["get", "list"]
+{{- end }}

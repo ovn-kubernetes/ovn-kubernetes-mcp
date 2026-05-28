@@ -1,0 +1,32 @@
+{{- /*
+  Namespace handling
+  ------------------
+  createNamespace controls whether this template renders a Namespace object:
+    "auto" (default) - look up the namespace at install time; render only
+                       if it does NOT already exist on the cluster.
+    true             - always render (fails if namespace exists and is
+                       not Helm-owned; useful for first-time installs).
+    false            - never render (namespace is managed outside Helm).
+
+  Note: the `lookup` function returns an empty value during `helm template`
+  or `helm install --dry-run` (no cluster connection), so on a real install
+  this is safe; on dry-run with createNamespace="auto" the Namespace is
+  always emitted.
+*/ -}}
+{{- $create := .Values.createNamespace -}}
+{{- if eq (toString $create) "auto" -}}
+  {{- $existing := (lookup "v1" "Namespace" "" .Values.namespace) -}}
+  {{- if not $existing -}}
+    {{- $create = true -}}
+  {{- else -}}
+    {{- $create = false -}}
+  {{- end -}}
+{{- end -}}
+{{- if $create }}
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: {{ .Values.namespace }}
+  labels:
+    {{- include "ovnk-mcp-server.labels" . | nindent 4 }}
+{{- end }}

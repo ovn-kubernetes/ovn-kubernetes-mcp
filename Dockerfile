@@ -1,8 +1,14 @@
-# Build stage – use Go image to match go.mod (set via build-arg from Makefile)
+# Build stage – pinned to the build host's native architecture so Go
+# cross-compiles (fast) instead of running under QEMU emulation (slow).
 ARG GOLANG_IMAGE=quay.io/projectquay/golang
 ARG GOLANG_VERSION=1.24
-FROM ${GOLANG_IMAGE}:${GOLANG_VERSION} AS builder
+FROM --platform=$BUILDPLATFORM ${GOLANG_IMAGE}:${GOLANG_VERSION} AS builder
 WORKDIR /build
+
+# TARGETOS / TARGETARCH are injected automatically by BuildKit and tell
+# `make build` which platform to produce the binary for.
+ARG TARGETOS=linux
+ARG TARGETARCH=amd64
 
 ENV CGO_ENABLED=0
 ENV GOPATH=/go
@@ -12,7 +18,7 @@ COPY go.mod go.sum ./
 RUN go mod download
 
 COPY . .
-RUN make build
+RUN make build GOOS=${TARGETOS} GOARCH=${TARGETARCH}
 
 # Runtime stage – minimal image
 FROM alpine:3.23

@@ -27,6 +27,7 @@ func NewFakeClient(objects ...runtime.Object) *OVNKMCPServerClientSet {
 		dynamicClient:               dynamicClient,
 		deferredDiscoveryRESTMapper: deferredDiscoveryRESTMapper,
 		config:                      &rest.Config{},
+		debugPodNamespace:           "default",
 	}
 }
 

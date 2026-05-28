@@ -17,10 +17,14 @@ type OVNKMCPServerClientSet struct {
 	config                      *rest.Config
 	corev1RestClient            rest.Interface
 	podExecutor                 exec.RemoteExecutor
+	debugPodNamespace           string
 }
 
 // NewOVNKMCPServerClientSet creates a new OVNKMCPServerClientSet.
-func NewOVNKMCPServerClientSet(config *rest.Config) (*OVNKMCPServerClientSet, error) {
+func NewOVNKMCPServerClientSet(config *rest.Config, debugPodNamespace string) (*OVNKMCPServerClientSet, error) {
+	if debugPodNamespace == "" {
+		debugPodNamespace = "default"
+	}
 	clientSet := kubernetes.NewForConfigOrDie(config)
 	dynamicClient := dynamic.NewForConfigOrDie(config)
 	memoryClient := memory.NewMemCacheClient(clientSet.Discovery())
@@ -32,5 +36,6 @@ func NewOVNKMCPServerClientSet(config *rest.Config) (*OVNKMCPServerClientSet, er
 		config:                      config,
 		corev1RestClient:            clientSet.CoreV1().RESTClient(),
 		podExecutor:                 &exec.DefaultRemoteExecutor{},
+		debugPodNamespace:           debugPodNamespace,
 	}, nil
 }

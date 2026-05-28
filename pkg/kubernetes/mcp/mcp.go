@@ -11,7 +11,8 @@ import (
 )
 
 type Config struct {
-	Kubeconfig string
+	Kubeconfig        string
+	DebugPodNamespace string
 }
 
 type MCPServer struct {
@@ -33,7 +34,7 @@ func NewMCPServer(cfg Config) (*MCPServer, error) {
 		}
 	}
 
-	clientSet, err := client.NewOVNKMCPServerClientSet(config)
+	clientSet, err := client.NewOVNKMCPServerClientSet(config, cfg.DebugPodNamespace)
 	if err != nil {
 		return nil, err
 	}

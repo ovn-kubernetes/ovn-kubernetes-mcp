@@ -5,8 +5,6 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/modelcontextprotocol/go-sdk/mcp"
-	k8stypes "github.com/ovn-kubernetes/ovn-kubernetes-mcp/pkg/kubernetes/types"
 	"github.com/ovn-kubernetes/ovn-kubernetes-mcp/pkg/utils/commandbuilder"
 )
 
@@ -16,14 +14,13 @@ const (
 )
 
 // utilityExists checks if a utility/command exists in the container
-func (s *MCPServer) utilityExists(ctx context.Context, req *mcp.CallToolRequest, node, utility string) error {
+func (s *MCPServer) utilityExists(ctx context.Context, namespace, node, utility string) error {
 	cmd := commandbuilder.NewCommand(utility, "-V")
-	debugParameter := k8stypes.DebugNodeParams{Name: node, Image: s.cfg.Image, Command: cmd.Build()}
-	_, result, err := s.k8sMcpServer.DebugNode(ctx, req, debugParameter)
+	_, stderr, err := s.runDebugNodeCommand(ctx, namespace, node, s.cfg.Image, cmd.Build(), "", "", 0)
 	if err != nil {
 		return fmt.Errorf("error while checking availability of the utility %s: %w", utility, err)
 	}
-	stderr := strings.TrimSpace(filterWarnings(result.Stderr))
+	stderr = strings.TrimSpace(filterWarnings(stderr))
 	if stderr != "" {
 		return fmt.Errorf("utility %s is unavailable in configured image: %s", utility, stderr)
 	}

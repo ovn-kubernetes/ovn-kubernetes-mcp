@@ -16,7 +16,14 @@ import (
 // GetIPCommandOutput executes 'ip' utility commands on a node.
 // Requires ip utility in the debug container image.
 func (s *MCPServer) GetIPCommandOutput(ctx context.Context, req *mcp.CallToolRequest, in types.ListIPParams) (*mcp.CallToolResult, types.Result, error) {
-	err := s.utilityExists(ctx, req, in.Node, "ip")
+	// If timeout is specified, create a new context with timeout
+	var cancel context.CancelFunc
+	ctx, cancel = in.TimeoutParams.WithTimeout(ctx)
+	if cancel != nil {
+		defer cancel()
+	}
+
+	err := s.utilityExists(ctx, in.Namespace, in.Node, "ip")
 	if err != nil {
 		return nil, types.Result{}, fmt.Errorf("error while getting ip data: failed to verify ip utility availability in configured image: %w", err)
 	}
@@ -36,7 +43,7 @@ func (s *MCPServer) GetIPCommandOutput(ctx context.Context, req *mcp.CallToolReq
 	cmd.Add(strings.Fields(in.Command)...)
 	cmd.AddIfNotEmpty(in.FilterParameters, strings.Fields(in.FilterParameters)...)
 
-	stdout, err := s.executeCommand(ctx, req, in.Node, cmd.Build())
+	stdout, err := s.executeCommand(ctx, in.Namespace, in.Node, cmd.Build())
 	if err != nil {
 		return nil, types.Result{}, fmt.Errorf("error while getting ip data: %w", err)
 	}

@@ -6,7 +6,6 @@ import (
 	"strconv"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
-	k8stypes "github.com/ovn-kubernetes/ovn-kubernetes-mcp/pkg/kubernetes/types"
 	"github.com/ovn-kubernetes/ovn-kubernetes-mcp/pkg/network-tools/types"
 	"github.com/ovn-kubernetes/ovn-kubernetes-mcp/pkg/utils/commandbuilder"
 )
@@ -53,30 +52,26 @@ func (s *MCPServer) Tcpdump(ctx context.Context, req *mcp.CallToolRequest, in ty
 	cmd.AddIfNotEmpty(in.Interface, "-i", in.Interface)
 	cmd.AddIfNotEmpty(in.BPFFilter, in.BPFFilter)
 
+	// If timeout is specified, create a new context with timeout
+	var cancel context.CancelFunc
+	ctx, cancel = in.TimeoutParams.WithTimeout(ctx)
+	if cancel != nil {
+		defer cancel()
+	}
+
 	switch in.TargetType {
 	case "node":
-		result, err := s.runDebugNode(ctx, req, k8stypes.DebugNodeParams{
-			Name:    in.NodeName,
-			Image:   s.tcpdumpImage,
-			Command: cmd.Build(),
-		})
+		stdout, stderr, err := s.runDebugNodeCommand(ctx, in.NodePodNamespace, in.NodeName, s.cfg.TcpdumpImage, cmd.Build(), "", "", 0)
 		if err != nil {
 			return nil, types.CommandResult{}, err
 		}
-		return nil, result, nil
+		return nil, types.CommandResult{Output: stdout, Stderr: stderr}, nil
 	case "pod":
-		result, err := s.runExecPod(ctx, req, k8stypes.ExecPodParams{
-			NamespacedNameParams: k8stypes.NamespacedNameParams{
-				Name:      in.PodName,
-				Namespace: in.PodNamespace,
-			},
-			Container: in.ContainerName,
-			Command:   cmd.Build(),
-		})
+		stdout, stderr, err := s.runPodExecCommand(ctx, in.PodNamespace, in.PodName, in.ContainerName, cmd.Build())
 		if err != nil {
 			return nil, types.CommandResult{}, err
 		}
-		return nil, result, nil
+		return nil, types.CommandResult{Output: stdout, Stderr: stderr}, nil
 	default:
 		return nil, types.CommandResult{}, fmt.Errorf("invalid target_type: %s (must be 'node' or 'pod')", in.TargetType)
 	}

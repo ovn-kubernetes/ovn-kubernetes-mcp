@@ -3,11 +3,13 @@ package mcp
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
-	kubernetesmcp "github.com/ovn-kubernetes/ovn-kubernetes-mcp/pkg/kubernetes/mcp"
-	k8stypes "github.com/ovn-kubernetes/ovn-kubernetes-mcp/pkg/kubernetes/types"
+	"github.com/ovn-kubernetes/ovn-kubernetes-mcp/pkg/utils/timeout"
 )
+
+type RunDebugNodeCommandFuncType func(ctx context.Context, namespace string, nodeName string, image string, command []string, hostPath string, mountPath string, timeout time.Duration) (string, string, error)
 
 // Config contains the configuration for the kernel MCP server.
 type Config struct {
@@ -17,16 +19,19 @@ type Config struct {
 
 // MCPServer provides MCP server functionality for kernel operations.
 type MCPServer struct {
-	k8sMcpServer *kubernetesmcp.MCPServer
-	cfg          Config
+	runDebugNodeCommand RunDebugNodeCommandFuncType
+	cfg                 Config
 }
 
 // NewMCPServer creates a new MCP server instance
-func NewMCPServer(k8sMcpServer *kubernetesmcp.MCPServer, cfg Config) *MCPServer {
-	return &MCPServer{
-		k8sMcpServer: k8sMcpServer,
-		cfg:          cfg,
+func NewMCPServer(runDebugNodeCommand RunDebugNodeCommandFuncType, cfg Config) (*MCPServer, error) {
+	if runDebugNodeCommand == nil {
+		return nil, fmt.Errorf("function to run debug node command is nil")
 	}
+	return &MCPServer{
+		runDebugNodeCommand: runDebugNodeCommand,
+		cfg:                 cfg,
+	}, nil
 }
 
 // AddTools registers all kernel-related MCP tools
@@ -39,6 +44,7 @@ func (s *MCPServer) AddTools(server *mcp.Server) {
 			              Use this command to discover a list of all (or a filtered selection of) currently tracked connections.
 Parameters:
 - node (required): Name of the node from where conntrack entries are expected to be extracted
+- namespace (optional): Namespace of the debug pod from where conntrack entries are expected to be extracted. Default: 'default'
 - command (optional): These options specify the particular operation to perform. These options can only be used if configured image has 'conntrack' utility available.
 					  -L, --dump : List connection tracking table.
 					  -C, --count: Show the table counter.
@@ -53,14 +59,16 @@ Parameters:
 - tail (optional): Return only last N lines
 - apply_tail_first (optional): If both head and tail are set and apply_tail_first is true,
 apply tail before head. Default: false
+- timeout_seconds (optional): Timeout in seconds for the command execution. If not specified, server default timeout is used. The maximum value is %d seconds.
 
 Example:
 - node='ovn-control-plane', command='-L'
+- node='ovn-worker', namespace='ovn-kubernetes', command='-L'
 - node='ovn-worker', filter_parameters='-s 1.2.3.4 -d 5.6.7.8 -p tcp --sport 32000 --dport 10250'
 
 Example output:
 tcp 6 91 ESTABLISHED src=1.2.3.4 dst=5.6.7.8 sport=32000 dport=10250 src=5.6.7.8 dst=1.2.3.4  sport=10250 dport=32000 [ASSURED] mark=0 secctx=system_u:object_r:unlabeled_t:s0 use=2
-`, defaultMaxOutputLines),
+`, defaultMaxOutputLines, int(timeout.MaxTimeout.Seconds())),
 		}, s.GetConntrack)
 	// get-iptables tool registration
 	mcp.AddTool(server,
@@ -70,6 +78,7 @@ tcp 6 91 ESTABLISHED src=1.2.3.4 dst=5.6.7.8 sport=32000 dport=10250 src=5.6.7.8
 			              Iptables and ip6tables are used to inspect the tables of IPv4 and IPv6 packet filter rules in the Linux kernel.
 Parameters:
 - node (required): Name of the node from where packet filter rules are expected to be extracted
+- namespace (optional): Namespace of the debug pod from where packet filter rules are expected to be extracted. Default: 'default'
 - table (optional): There are currently five independent tables (which tables are present at any time depends on the kernel configuration options and which modules are present).
                     filter	: This is the default table
 					nat   	: This  table is consulted when a packet that creates a new connection is encountered.
@@ -91,6 +100,7 @@ Parameters:
 - tail (optional): Return only last N lines
 - apply_tail_first (optional): If both head and tail are set and apply_tail_first is true,
 apply tail before head. Default: false
+- timeout_seconds (optional): Timeout in seconds for the command execution. If not specified, server default timeout is used. The maximum value is %d seconds.
 							
 Example:
 - node='ovn-control-plane', table='nat', command='-L', filter_parameters='-nv4'	
@@ -98,7 +108,7 @@ Example output:
 Chain POSTROUTING (policy ACCEPT 675K packets, 41M bytes)
  pkts bytes target     prot opt in     out     source               destination         
  675K   41M OVN-KUBE-EGRESS-IP-MULTI-NIC  all  --  *      *       0.0.0.0/0            0.0.0.0/0     							
-`, defaultMaxOutputLines),
+`, defaultMaxOutputLines, int(timeout.MaxTimeout.Seconds())),
 		}, s.GetIptables)
 	// get-nft tool registration
 	mcp.AddTool(server,
@@ -107,6 +117,7 @@ Chain POSTROUTING (policy ACCEPT 675K packets, 41M bytes)
 			Description: fmt.Sprintf(`get-nft allows to interact with kernel to list packet filtering and classification rules.
 Parameters:
 - node (required): Name of the node from where packet filtering and classification rules are expected to be extracted
+- namespace (optional): Namespace of the debug pod from where packet filtering and classification rules are expected to be extracted. Default: 'default'
 - command (required): These options specify the desired action to perform. Only one of them can be specified on the command line unless otherwise stated below.
                     - list ruleset   : The ruleset keyword is used to identify the whole set of tables, chains, etc. Print the ruleset in human-readable format.
 					- list tables    : List all chains and rules of the specified table.
@@ -126,12 +137,13 @@ Parameters:
 - tail (optional): Return only last N lines
 - apply_tail_first (optional): If both head and tail are set and apply_tail_first is true,
 apply tail before head. Default: false
+- timeout_seconds (optional): Timeout in seconds for the command execution. If not specified, server default timeout is used. The maximum value is %d seconds.
 					
 Example:
 - node='ovn-control-plane', command='list tables', address_families='inet'
 Example output:
 table inet ovn-kubernetes
-`, defaultMaxOutputLines),
+`, defaultMaxOutputLines, int(timeout.MaxTimeout.Seconds())),
 		}, s.GetNFT)
 	// get-ip tool registration
 	mcp.AddTool(server,
@@ -140,6 +152,7 @@ table inet ovn-kubernetes
 			Description: fmt.Sprintf(`get-ip allows to interact with kernel to list routing, network devices, interfaces.
 Parameters:
 - node (required): Name of the node on which ip command is expected to be executed
+- namespace (optional): Namespace of the debug pod on which ip command is expected to be executed. Default: 'default'
 - options (optional): These options helps in providing more details or formattig output data.
                       -d, -details        : Output more detailed information.
 					  -4                  : shortcut for -family inet.
@@ -163,33 +176,33 @@ Parameters:
 - tail (optional): Return only last N lines
 - apply_tail_first (optional): If both head and tail are set and apply_tail_first is true,
 apply tail before head. Default: false
+- timeout_seconds (optional): Timeout in seconds for the command execution. If not specified, server default timeout is used. The maximum value is %d seconds.
 
 Example:
 - node='ovn-control-plane', options="-4", command='route show', filter_parameters='table all'
 Example output:
 default via 10.0.0.254 dev br-ex proto dhcp src 10.0.0.10 metric 48
-`, defaultMaxOutputLines),
+`, defaultMaxOutputLines, int(timeout.MaxTimeout.Seconds())),
 		}, s.GetIPCommandOutput)
 }
 
 // executeCommand executes a command on a node via kubectl debug
-func (s *MCPServer) executeCommand(ctx context.Context, req *mcp.CallToolRequest, node string, command []string) (string, error) {
-	debugParameter := k8stypes.DebugNodeParams{Name: node, Image: s.cfg.Image, Command: command}
-	_, result, err := s.k8sMcpServer.DebugNode(ctx, req, debugParameter)
+func (s *MCPServer) executeCommand(ctx context.Context, namespace, node string, command []string) (string, error) {
+	stdout, stderr, err := s.runDebugNodeCommand(ctx, namespace, node, s.cfg.Image, command, "", "", 0)
 	if err != nil {
 		return "", fmt.Errorf("error while establishing tty connection to the node: %w", err)
 	}
 
 	// Filter out warning lines from stderr
-	if result.Stderr != "" {
-		stderr := filterWarnings(result.Stderr)
+	if stderr != "" {
+		stderr := filterWarnings(stderr)
 		if stderr != "" {
 			return "", fmt.Errorf("error while running command: %s", stderr)
 		}
 	}
 
 	// Filter out warning lines from stdout
-	stdout := filterWarnings(result.Stdout)
+	stdout = filterWarnings(stdout)
 
 	return stdout, nil
 }

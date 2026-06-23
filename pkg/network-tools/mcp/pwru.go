@@ -5,7 +5,6 @@ import (
 	"strconv"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
-	k8stypes "github.com/ovn-kubernetes/ovn-kubernetes-mcp/pkg/kubernetes/types"
 	"github.com/ovn-kubernetes/ovn-kubernetes-mcp/pkg/network-tools/types"
 	"github.com/ovn-kubernetes/ovn-kubernetes-mcp/pkg/utils/commandbuilder"
 )
@@ -35,17 +34,16 @@ func (s *MCPServer) Pwru(ctx context.Context, req *mcp.CallToolRequest, in types
 	// pwru accepts pcap filter as positional argument(s)
 	cmd.AddIfNotEmpty(in.BPFFilter, in.BPFFilter)
 
-	target := k8stypes.DebugNodeParams{
-		Name:      in.NodeName,
-		Image:     s.pwruImage,
-		HostPath:  "/sys/kernel/debug",
-		MountPath: "/sys/kernel/debug",
-		Command:   cmd.Build(),
+	// If timeout is specified, create a new context with timeout
+	var cancel context.CancelFunc
+	ctx, cancel = in.TimeoutParams.WithTimeout(ctx)
+	if cancel != nil {
+		defer cancel()
 	}
 
-	result, err := s.runDebugNode(ctx, req, target)
+	stdout, stderr, err := s.runDebugNodeCommand(ctx, in.NodePodNamespace, in.NodeName, s.cfg.PwruImage, cmd.Build(), "/sys/kernel/debug", "/sys/kernel/debug", 0)
 	if err != nil {
 		return nil, types.CommandResult{}, err
 	}
-	return nil, result, nil
+	return nil, types.CommandResult{Output: stdout, Stderr: stderr}, nil
 }

@@ -1,47 +1,13 @@
 package mcp
 
 import (
-	"context"
 	"fmt"
 	"regexp"
 
-	"github.com/modelcontextprotocol/go-sdk/mcp"
-	k8stypes "github.com/ovn-kubernetes/ovn-kubernetes-mcp/pkg/kubernetes/types"
-	"github.com/ovn-kubernetes/ovn-kubernetes-mcp/pkg/network-tools/types"
 	"github.com/ovn-kubernetes/ovn-kubernetes-mcp/pkg/utils"
 )
 
 var interfaceNamePattern = regexp.MustCompile(`^[a-zA-Z0-9][a-zA-Z0-9._-]*$`)
-
-// runDebugNode runs a command on a node
-func (s *MCPServer) runDebugNode(ctx context.Context, req *mcp.CallToolRequest, target k8stypes.DebugNodeParams) (types.CommandResult, error) {
-	if target.Name == "" {
-		return types.CommandResult{}, fmt.Errorf("node's name is required when target type is 'node'")
-	}
-	if target.Image == "" {
-		return types.CommandResult{}, fmt.Errorf("node's image is required when target type is 'node'")
-	}
-	_, output, err := s.k8sMcpServer.DebugNode(ctx, req, target)
-	if err != nil {
-		return types.CommandResult{}, err
-	}
-	return types.CommandResult{Output: output.Stdout}, nil
-}
-
-// runExecPod runs a command on a pod
-func (s *MCPServer) runExecPod(ctx context.Context, req *mcp.CallToolRequest, target k8stypes.ExecPodParams) (types.CommandResult, error) {
-	if target.Name == "" {
-		return types.CommandResult{}, fmt.Errorf("pod's name is required when target type is 'pod'")
-	}
-	if target.Namespace == "" {
-		target.Namespace = "default"
-	}
-	_, output, err := s.k8sMcpServer.ExecPod(ctx, req, target)
-	if err != nil {
-		return types.CommandResult{}, err
-	}
-	return types.CommandResult{Output: output.Stdout}, nil
-}
 
 // validateInterface validates a network interface name for security and correctness.
 func validateInterface(iface string) error {

@@ -1,5 +1,7 @@
 package types
 
+import "github.com/ovn-kubernetes/ovn-kubernetes-mcp/pkg/utils/timeout"
+
 // BaseNetworkDiagParams contains common parameters shared across network diagnostic tools.
 type BaseNetworkDiagParams struct {
 	BPFFilter string `json:"bpf_filter,omitempty"`
@@ -13,7 +15,8 @@ type TcpdumpParams struct {
 	TargetType string `json:"target_type"`
 
 	// Node-specific fields
-	NodeName string `json:"node_name,omitempty"`
+	NodeName         string `json:"node_name,omitempty"`
+	NodePodNamespace string `json:"node_pod_namespace,omitempty"`
 
 	// Pod-specific fields
 	PodName       string `json:"pod_name,omitempty"`
@@ -23,6 +26,8 @@ type TcpdumpParams struct {
 	Interface   string `json:"interface,omitempty"`
 	PacketCount int    `json:"packet_count,omitempty"`
 	Snaplen     int    `json:"snaplen,omitempty"`
+
+	timeout.TimeoutParams
 }
 
 // PwruParams contains parameters for running pwru (packet, where are you?) eBPF-based
@@ -31,12 +36,14 @@ type PwruParams struct {
 	BaseNetworkDiagParams
 
 	NodeName         string `json:"node_name"`
+	NodePodNamespace string `json:"node_pod_namespace,omitempty"`
 	OutputLimitLines int    `json:"output_limit_lines,omitempty"`
+
+	timeout.TimeoutParams
 }
 
 // CommandResult represents the output and status of an executed command.
 type CommandResult struct {
-	Output   string `json:"output"`
-	ExitCode int    `json:"exit_code,omitempty"`
-	Error    string `json:"error,omitempty"`
+	Output string `json:"output"`
+	Stderr string `json:"stderr,omitempty"`
 }

@@ -15,7 +15,14 @@ import (
 // GetNFT MCP handler for nftables operations.
 // GetNFT retrieves nftables configuration from a Kubernetes node.
 func (s *MCPServer) GetNFT(ctx context.Context, req *mcp.CallToolRequest, in types.ListNFTParams) (*mcp.CallToolResult, types.Result, error) {
-	err := s.utilityExists(ctx, req, in.Node, "nft")
+	// If timeout is specified, create a new context with timeout
+	var cancel context.CancelFunc
+	ctx, cancel = in.TimeoutParams.WithTimeout(ctx)
+	if cancel != nil {
+		defer cancel()
+	}
+
+	err := s.utilityExists(ctx, in.Namespace, in.Node, "nft")
 	if err != nil {
 		return nil, types.Result{}, fmt.Errorf("error while getting nft data: failed to verify nft utility availability in configured image: %w", err)
 	}
@@ -36,7 +43,7 @@ func (s *MCPServer) GetNFT(ctx context.Context, req *mcp.CallToolRequest, in typ
 	cmd.Add(strings.Fields(command)...)
 	cmd.AddIf(addressFamilies != "", addressFamilies)
 
-	stdout, err := s.executeCommand(ctx, req, in.Node, cmd.Build())
+	stdout, err := s.executeCommand(ctx, in.Namespace, in.Node, cmd.Build())
 	if err != nil {
 		return nil, types.Result{}, fmt.Errorf("error while getting nft data: %w", err)
 	}

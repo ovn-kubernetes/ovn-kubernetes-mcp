@@ -16,7 +16,14 @@ import (
 // GetIptables retrieves iptables/ip6tables rules from a Kubernetes node.
 // Automatically detects IPv6 and uses ip6tables when needed.
 func (s *MCPServer) GetIptables(ctx context.Context, req *mcp.CallToolRequest, in types.ListIPTablesParams) (*mcp.CallToolResult, types.Result, error) {
-	err := s.utilityExists(ctx, req, in.Node, "iptables")
+	// If timeout is specified, create a new context with timeout
+	var cancel context.CancelFunc
+	ctx, cancel = in.TimeoutParams.WithTimeout(ctx)
+	if cancel != nil {
+		defer cancel()
+	}
+
+	err := s.utilityExists(ctx, in.Namespace, in.Node, "iptables")
 	if err != nil {
 		return nil, types.Result{}, fmt.Errorf("error while getting list of iptables rules: failed to verify iptables utility availability in configured image: %w", err)
 	}
@@ -44,7 +51,7 @@ func (s *MCPServer) GetIptables(ctx context.Context, req *mcp.CallToolRequest, i
 	// FilterParameters are invalid with -S/--list-rules command
 	cmd.AddIf(in.FilterParameters != "" && command != "-S" && command != "--list-rules", strings.Fields(in.FilterParameters)...)
 
-	stdout, err := s.executeCommand(ctx, req, in.Node, cmd.Build())
+	stdout, err := s.executeCommand(ctx, in.Namespace, in.Node, cmd.Build())
 	if err != nil {
 		return nil, types.Result{}, fmt.Errorf("error while getting list of iptables rules: %w", err)
 	}

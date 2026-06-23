@@ -6,14 +6,40 @@ import (
 	"log"
 	"time"
 
+	"github.com/ovn-kubernetes/ovn-kubernetes-mcp/pkg/utils"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/utils/ptr"
 )
 
-func (c *OVNKMCPServerClientSet) DebugNode(ctx context.Context, name, image string, command []string, hostPath, mountPath string) (string, string, error) {
-	namespace := metav1.NamespaceDefault
+func (c *OVNKMCPServerClientSet) DebugNode(ctx context.Context, namespace, name, image string, command []string, hostPath, mountPath string, timeout time.Duration) (string, string, error) {
+	// Validate name
+	if name == "" {
+		return "", "", fmt.Errorf("node name is required")
+	}
+
+	// Validate paths before creating the pod
+	if err := utils.ValidatePath(hostPath, "hostPath", true); err != nil {
+		return "", "", err
+	}
+
+	if err := utils.ValidatePath(mountPath, "mountPath", true); err != nil {
+		return "", "", err
+	}
+
+	// If namespace is not provided, use the default namespace
+	if namespace == "" {
+		namespace = metav1.NamespaceDefault
+	}
+
+	// If timeout is specified, create a new context with timeout
+	if timeout != 0 {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, timeout)
+		defer cancel()
+	}
+
 	debugPodName, cleanupPod, err := c.createPod(ctx, name, namespace, image, hostPath, mountPath)
 	if err != nil {
 		return "", "", err
@@ -110,8 +136,12 @@ func (c *OVNKMCPServerClientSet) createPod(ctx context.Context, node, namespace,
 	}
 
 	cleanupPod := func() {
+		// Create a new context with a timeout of 10 seconds to delete the pod.
+		cleanupCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+
 		// Delete the pod.
-		err := c.clientSet.CoreV1().Pods(namespace).Delete(ctx, createdDebugPod.Name, metav1.DeleteOptions{})
+		err := c.clientSet.CoreV1().Pods(namespace).Delete(cleanupCtx, createdDebugPod.Name, metav1.DeleteOptions{})
 		if err != nil {
 			log.Printf("failed to cleanup debug pod: %v", err)
 		}

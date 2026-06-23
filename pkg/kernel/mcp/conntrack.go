@@ -19,8 +19,15 @@ const conntrackSystemFile = "/proc/net/nf_conntrack"
 // TODO: Add support for conntrack event monitoring (-E flag).
 // TODO: Add support for -G (get specific entry) command.
 func (s *MCPServer) GetConntrack(ctx context.Context, req *mcp.CallToolRequest, in types.ListConntrackParams) (*mcp.CallToolResult, types.Result, error) {
+	// If timeout is specified, create a new context with timeout
+	var cancel context.CancelFunc
+	ctx, cancel = in.TimeoutParams.WithTimeout(ctx)
+	if cancel != nil {
+		defer cancel()
+	}
+
 	// Falls back to /proc/net/nf_conntrack parsing when conntrack CLI unavailable.
-	err := s.utilityExists(ctx, req, in.Node, "conntrack")
+	err := s.utilityExists(ctx, in.Namespace, in.Node, "conntrack")
 	conntrackCliAvailable := err == nil // true if conntrack CLI is available, false otherwise
 	if err := validateConntrackCommand(in.Command, conntrackCliAvailable); err != nil {
 		return nil, types.Result{}, fmt.Errorf("error while getting list of conntrack entries: %w", err)
@@ -31,9 +38,9 @@ func (s *MCPServer) GetConntrack(ctx context.Context, req *mcp.CallToolRequest, 
 
 	var stdout string
 	if !conntrackCliAvailable {
-		stdout, err = s.getConntrackFromFile(ctx, req, in.Node)
+		stdout, err = s.getConntrackFromFile(ctx, in.Namespace, in.Node)
 	} else {
-		stdout, err = s.getConntrackUsingCLI(ctx, req, in.Node, strings.TrimSpace(in.Command), in.FilterParameters)
+		stdout, err = s.getConntrackUsingCLI(ctx, in.Namespace, in.Node, strings.TrimSpace(in.Command), in.FilterParameters)
 	}
 	if err != nil {
 		return nil, types.Result{}, fmt.Errorf("error while getting list of conntrack entries: %w", err)
@@ -49,7 +56,7 @@ func (s *MCPServer) GetConntrack(ctx context.Context, req *mcp.CallToolRequest, 
 }
 
 // getConntrackUsingCLI executes conntrack CLI commands.
-func (s *MCPServer) getConntrackUsingCLI(ctx context.Context, req *mcp.CallToolRequest, node, command, filterParameters string) (string, error) {
+func (s *MCPServer) getConntrackUsingCLI(ctx context.Context, namespace, node, command, filterParameters string) (string, error) {
 	cmd := commandbuilder.NewCommand("conntrack")
 	switch command {
 	case "-L", "--dump":
@@ -63,15 +70,15 @@ func (s *MCPServer) getConntrackUsingCLI(ctx context.Context, req *mcp.CallToolR
 		cmd.Add("-L")
 		cmd.Add(strings.Fields(filterParameters)...)
 	}
-	return s.executeCommand(ctx, req, node, cmd.Build())
+	return s.executeCommand(ctx, namespace, node, cmd.Build())
 }
 
 // getConntrackFromFile parses /proc/net/nf_conntrack directly.
 // TODO: Add filter support while getting conntrack entries from /proc/net/nf_conntrack.
-func (s *MCPServer) getConntrackFromFile(ctx context.Context, req *mcp.CallToolRequest, node string) (string, error) {
+func (s *MCPServer) getConntrackFromFile(ctx context.Context, namespace, node string) (string, error) {
 	cmd := commandbuilder.NewCommand("cat")
 	cmd.Add(conntrackSystemFile)
-	return s.executeCommand(ctx, req, node, cmd.Build())
+	return s.executeCommand(ctx, namespace, node, cmd.Build())
 }
 
 // validateConntrackCommand validates the command to be used to get list of conntrack entries.

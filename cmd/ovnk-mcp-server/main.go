@@ -33,8 +33,7 @@ type MCPServerConfig struct {
 	Transport     string
 	Host          string
 	Port          string
-	PwruImage     string
-	TcpdumpImage  string
+	NetworkTools  nettoolsmcp.Config
 	Kernel        kernelmcp.Config
 	Kubernetes    kubernetesmcp.Config
 	ToolTimeout   time.Duration
@@ -64,11 +63,17 @@ func setupLiveCluster(serverCfg *MCPServerConfig, server *mcp.Server) {
 	log.Println("Adding OVS tools to OVN-K MCP server")
 	ovsServer.AddTools(server)
 
-	kernelMcpServer := kernelmcp.NewMCPServer(k8sMcpServer, serverCfg.Kernel)
+	kernelMcpServer, err := kernelmcp.NewMCPServer(k8sMcpServer.RunDebugNode, serverCfg.Kernel)
+	if err != nil {
+		log.Fatalf("Failed to create Kernel MCP server: %v", err)
+	}
 	log.Println("Adding Kernel tools to OVN-K MCP server")
 	kernelMcpServer.AddTools(server)
 
-	netToolsServer := nettoolsmcp.NewMCPServer(k8sMcpServer, serverCfg.PwruImage, serverCfg.TcpdumpImage)
+	netToolsServer, err := nettoolsmcp.NewMCPServer(k8sMcpServer.RunDebugNode, k8sMcpServer.RunPodExecCommand, serverCfg.NetworkTools)
+	if err != nil {
+		log.Fatalf("Failed to create Network Tools MCP server: %v", err)
+	}
 	log.Println("Adding network tools to OVN-K MCP server")
 	netToolsServer.AddTools(server)
 }
@@ -187,9 +192,9 @@ func parseFlags() *MCPServerConfig {
 	flag.StringVar(&cfg.Host, "host", "localhost", "Host to bind to (use 0.0.0.0 for container/cluster)")
 	flag.StringVar(&cfg.Port, "port", "8080", "Port to use")
 	flag.StringVar(&cfg.Kubernetes.Kubeconfig, "kubeconfig", "", "Path to the kubeconfig file")
-	flag.StringVar(&cfg.PwruImage, "pwru-image", "docker.io/cilium/pwru:v1.0.10", "Container image for pwru operations")
+	flag.StringVar(&cfg.NetworkTools.PwruImage, "pwru-image", "docker.io/cilium/pwru:v1.0.10", "Container image for pwru operations")
 
-	flag.StringVar(&cfg.TcpdumpImage, "tcpdump-image", defaultNetshootImage, "Container image for tcpdump operations")
+	flag.StringVar(&cfg.NetworkTools.TcpdumpImage, "tcpdump-image", defaultNetshootImage, "Container image for tcpdump operations")
 	flag.StringVar(&cfg.Kernel.Image, "kernel-image", defaultNetshootImage, "Container image for kernel operations")
 	flag.IntVar(&timeoutSeconds, "tool-timeout", 120, "Timeout in seconds for tool operations (0 to disable)")
 	flag.StringVar(&disabledCategories, "disable-categories", "",

@@ -1,12 +1,17 @@
 package types
 
-import "github.com/ovn-kubernetes/ovn-kubernetes-mcp/pkg/utils/headtail"
+import (
+	"github.com/ovn-kubernetes/ovn-kubernetes-mcp/pkg/utils/headtail"
+	"github.com/ovn-kubernetes/ovn-kubernetes-mcp/pkg/utils/timeout"
+)
 
 // CommonParams contains the common parameters required for executing kernel commands on a Kubernetes node.
 // These parameters are embedded in other specific parameter types.
 type CommonParams struct {
-	Node string `json:"node"` // Node is the name of the Kubernetes node where the command will be executed
+	Node      string `json:"node"`                // Node is the name of the Kubernetes node where the command will be executed
+	Namespace string `json:"namespace,omitempty"` // Namespace is the namespace of the Kubernetes node where the command will be executed
 	headtail.HeadTailParams
+	timeout.TimeoutParams
 }
 
 // ListConntrackParams contains parameters for listing connection tracking entries using conntrack command.

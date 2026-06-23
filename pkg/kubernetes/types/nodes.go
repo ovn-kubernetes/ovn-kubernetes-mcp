@@ -1,12 +1,16 @@
 package types
 
-// DebugNodeParams is a type that contains the name, image and command of a node.
+import "github.com/ovn-kubernetes/ovn-kubernetes-mcp/pkg/utils/timeout"
+
+// DebugNodeParams is a type that contains the namespace, name, image, command, host path, mount path
+// of a node along with  timeout parameters to be used for the command execution.
 type DebugNodeParams struct {
-	Name      string   `json:"name"`
+	NamespacedNameParams
 	Image     string   `json:"image"`
 	Command   []string `json:"command"`
 	HostPath  string   `json:"host_path,omitempty"`
 	MountPath string   `json:"mount_path,omitempty"`
+	timeout.TimeoutParams
 }
 
 // DebugNodeResult is a type that contains the stdout and stderr of the executed command.

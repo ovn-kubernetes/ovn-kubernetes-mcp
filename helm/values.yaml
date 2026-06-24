@@ -1,0 +1,100 @@
+# Default values for ovnk-mcp-server
+
+# @section Namespace configuration
+# -- Namespace where the MCP server pod and its resources are deployed
+namespace: "ovnk-mcp"
+# -- Whether to create the namespace. Accepts:
+#    "auto" (default) - create only if the namespace doesn't already exist
+#    true             - always create (fails if it exists and is not Helm-owned)
+#    false            - never create (managed outside Helm)
+createNamespace: "auto"
+
+# -- Number of replicas for the MCP server deployment
+replicaCount: 1
+
+# @section Image configuration
+# Defaults to the multi-arch image published from this repo's
+# `.github/workflows/docker.yml`. For local development, build with
+# `make build-image` (produces `localhost/ovnk-mcp-server:dev`) and
+# override `repository`/`tag` accordingly.
+image:
+  # -- Container image repository
+  repository: ghcr.io/ovn-kubernetes/ovn-kubernetes-mcp/ovnk-mcp-server
+  # -- Container image tag (defaults to Chart appVersion)
+  tag: ""
+  # -- Image pull policy
+  pullPolicy: IfNotPresent
+
+# -- Secrets for pulling images from private registries
+imagePullSecrets: []
+# -- Override the chart name
+nameOverride: ""
+# -- Override the full resource name
+fullnameOverride: ""
+
+# @section MCP Server configuration
+# MCP server configuration (maps to CLI flags in main.go)
+mcpServer:
+  # -- Mode of debugging: live-cluster, offline, or both
+  mode: "live-cluster"
+  # -- Transport protocol: http (recommended for in-cluster) or stdio
+  transport: "http"
+  # -- Host address to bind to (0.0.0.0 for in-cluster, localhost for local dev)
+  host: "0.0.0.0"
+  # -- Port for HTTP transport
+  port: 8080
+  # -- Timeout in seconds for tool operations (0 to disable)
+  toolTimeout: 120
+  # -- Container image for pwru (packet, where are you?) operations
+  pwruImage: "docker.io/cilium/pwru:v1.0.10"
+  # -- Container image for tcpdump operations
+  tcpdumpImage: "nicolaka/netshoot:v0.15"
+  # -- Container image for kernel tools (conntrack, ip, iptables, nft)
+  kernelImage: "nicolaka/netshoot:v0.15"
+  # -- Namespace where debug pods are created for node debugging (pwru, tcpdump, conntrack, etc.)
+  debugPodNamespace: "default"
+
+# @section ServiceAccount configuration
+serviceAccount:
+  # -- Whether to create a ServiceAccount
+  create: true
+  # -- Annotations to add to the ServiceAccount
+  annotations: {}
+  # -- The name of the ServiceAccount to use (generated from fullname if not set)
+  name: ""
+
+# @section RBAC configuration
+rbac:
+  # -- Whether to create ClusterRole and ClusterRoleBinding
+  create: true
+
+# @section Service configuration
+service:
+  # -- Service type
+  type: ClusterIP
+  # -- Service port
+  port: 8080
+
+# -- Resource limits and requests for the MCP server container
+resources: {}
+  # limits:
+  #   cpu: 500m
+  #   memory: 256Mi
+  # requests:
+  #   cpu: 100m
+  #   memory: 128Mi
+
+# -- Node selector for pod scheduling
+nodeSelector: {}
+
+# -- Tolerations for pod scheduling
+tolerations: []
+
+# -- Affinity rules for pod scheduling
+affinity: {}
+
+# -- Additional annotations to add to the pod
+podAnnotations: {}
+
+# -- Additional labels to add to the pod
+podLabels: {}

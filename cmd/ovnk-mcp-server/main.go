@@ -187,6 +187,7 @@ func parseFlags() *MCPServerConfig {
 	flag.StringVar(&cfg.Host, "host", "localhost", "Host to bind to (use 0.0.0.0 for container/cluster)")
 	flag.StringVar(&cfg.Port, "port", "8080", "Port to use")
 	flag.StringVar(&cfg.Kubernetes.Kubeconfig, "kubeconfig", "", "Path to the kubeconfig file")
+	flag.StringVar(&cfg.Kubernetes.DebugPodNamespace, "debug-pod-namespace", "default", "Namespace where debug pods are created")
 	flag.StringVar(&cfg.PwruImage, "pwru-image", "docker.io/cilium/pwru:v1.0.10", "Container image for pwru operations")
 
 	flag.StringVar(&cfg.TcpdumpImage, "tcpdump-image", defaultNetshootImage, "Container image for tcpdump operations")

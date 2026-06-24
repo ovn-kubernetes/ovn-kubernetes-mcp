@@ -1,0 +1,11 @@
+apiVersion: v2
+name: ovnk-mcp-server
+description: A Helm chart for the OVN-Kubernetes MCP Server
+type: application
+version: 0.1.0
+appVersion: "latest"
+keywords:
+  - ovn-kubernetes
+  - mcp
+  - networking
+  - debugging

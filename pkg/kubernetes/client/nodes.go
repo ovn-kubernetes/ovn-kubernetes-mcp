@@ -13,7 +13,7 @@ import (
 )
 
 func (c *OVNKMCPServerClientSet) DebugNode(ctx context.Context, name, image string, command []string, hostPath, mountPath string) (string, string, error) {
-	namespace := metav1.NamespaceDefault
+	namespace := c.debugPodNamespace
 	debugPodName, cleanupPod, err := c.createPod(ctx, name, namespace, image, hostPath, mountPath)
 	if err != nil {
 		return "", "", err

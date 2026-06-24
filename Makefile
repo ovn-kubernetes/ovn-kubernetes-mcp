@@ -19,9 +19,13 @@ export CONTAINER_RUNTIME
 
 GOPATH ?= $(shell go env GOPATH)
 
+# Build configuration (defaults to host OS/arch)
+GOOS ?= $(shell go env GOOS)
+GOARCH ?= $(shell go env GOARCH)
+
 .PHONY: build
 build:
-	go build -o $(MCP_SERVER_PATH) cmd/ovnk-mcp-server/main.go
+	CGO_ENABLED=0 GOOS=$(GOOS) GOARCH=$(GOARCH) go build -o $(MCP_SERVER_PATH) cmd/ovnk-mcp-server/main.go
 
 # Container image build targets (use IMAGE to override tag, e.g. make build-image IMAGE=quay.io/myorg/ovnk-mcp-server:v1.0)
 IMAGE ?= localhost/ovnk-mcp-server:dev
@@ -161,6 +165,10 @@ test-e2e: build
 	$(MAKE) run-e2e || EXIT_CODE=$$?; \
 	if [ "$(MCP_MODE)" = "live-cluster" ]; then $(MAKE) undeploy-kind-ovnk || exit 1; fi; \
 	exit $${EXIT_CODE:-0}
+
+.PHONY: helm-docs
+helm-docs:
+	helm-docs --chart-search-root helm
 
 .PHONY: lint
 lint:

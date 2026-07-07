@@ -43,9 +43,13 @@ func (s *MCPServer) GetNFT(ctx context.Context, req *mcp.CallToolRequest, in typ
 	cmd.Add(strings.Fields(command)...)
 	cmd.AddIf(addressFamilies != "", addressFamilies)
 
-	stdout, err := s.executeCommand(ctx, in.Namespace, in.Node, cmd.Build())
+	stdout, stderr, err := s.executeCommand(ctx, in.Namespace, in.Node, cmd.Build())
 	if err != nil {
 		return nil, types.Result{}, fmt.Errorf("error while getting nft data: %w", err)
+	}
+
+	if stderr != "" {
+		return nil, types.Result{}, fmt.Errorf("error while running command: %s", stderr)
 	}
 
 	// Strip empty lines from the output

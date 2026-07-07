@@ -81,3 +81,61 @@ func TestFilterWarnings(t *testing.T) {
 		})
 	}
 }
+
+func TestSplitConntrackSummary(t *testing.T) {
+	tests := []struct {
+		name              string
+		input             string
+		expectedSummary   string
+		expectedRemaining string
+	}{
+		{
+			name:              "empty string",
+			input:             "",
+			expectedSummary:   "",
+			expectedRemaining: "",
+		},
+		{
+			name:              "conntrack dump summary",
+			input:             "conntrack v1.4.8 (conntrack-tools): 461 flow entries have been shown.",
+			expectedSummary:   "conntrack v1.4.8 (conntrack-tools): 461 flow entries have been shown.",
+			expectedRemaining: "",
+		},
+		{
+			name:              "conntrack dump summary with other stderr",
+			input:             "conntrack v1.4.9 (conntrack-tools): 52 flow entries have been shown.\nreal error message",
+			expectedSummary:   "conntrack v1.4.9 (conntrack-tools): 52 flow entries have been shown.",
+			expectedRemaining: "real error message",
+		},
+		{
+			name:              "unrelated stderr preserved",
+			input:             "command not found",
+			expectedSummary:   "",
+			expectedRemaining: "command not found",
+		},
+		{
+			name:              "partial match not treated as summary",
+			input:             "461 flow entries have been shown.",
+			expectedSummary:   "",
+			expectedRemaining: "461 flow entries have been shown.",
+		},
+		{
+			name:              "non conntrack-tools package not treated as summary",
+			input:             "conntrack v1.4.8 (other-tools): 10 flow entries have been shown.",
+			expectedSummary:   "",
+			expectedRemaining: "conntrack v1.4.8 (other-tools): 10 flow entries have been shown.",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			summary, remaining := splitConntrackSummary(tt.input)
+			if summary != tt.expectedSummary {
+				t.Errorf("splitConntrackSummary() summary = %q, want %q", summary, tt.expectedSummary)
+			}
+			if remaining != tt.expectedRemaining {
+				t.Errorf("splitConntrackSummary() remaining = %q, want %q", remaining, tt.expectedRemaining)
+			}
+		})
+	}
+}

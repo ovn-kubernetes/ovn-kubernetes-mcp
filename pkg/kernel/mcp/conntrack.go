@@ -36,14 +36,23 @@ func (s *MCPServer) GetConntrack(ctx context.Context, req *mcp.CallToolRequest, 
 		return nil, types.Result{}, fmt.Errorf("error while getting list of conntrack entries: %w", err)
 	}
 
-	var stdout string
+	var stdout, stderr, summary string
 	if !conntrackCliAvailable {
-		stdout, err = s.getConntrackFromFile(ctx, in.Namespace, in.Node)
+		stdout, stderr, err = s.getConntrackFromFile(ctx, in.Namespace, in.Node)
 	} else {
-		stdout, err = s.getConntrackUsingCLI(ctx, in.Namespace, in.Node, strings.TrimSpace(in.Command), in.FilterParameters)
+		stdout, stderr, err = s.getConntrackUsingCLI(ctx, in.Namespace, in.Node, strings.TrimSpace(in.Command), in.FilterParameters)
 	}
 	if err != nil {
 		return nil, types.Result{}, fmt.Errorf("error while getting list of conntrack entries: %w", err)
+	}
+
+	if stderr != "" {
+		// Split the stderr into summary and remaining stderr
+		remainingStderr := ""
+		summary, remainingStderr = splitConntrackSummary(stderr)
+		if remainingStderr != "" {
+			return nil, types.Result{}, fmt.Errorf("error while running command: %s", remainingStderr)
+		}
 	}
 
 	// Strip empty lines from the output
@@ -52,11 +61,15 @@ func (s *MCPServer) GetConntrack(ctx context.Context, req *mcp.CallToolRequest, 
 	lines = in.HeadTailParams.Apply(lines, defaultMaxOutputLines)
 	// Join the lines back into a single string
 	stdout = strings.Join(lines, "\n")
+	// If conntrack summary is present, add it to the output
+	if summary != "" {
+		stdout = fmt.Sprintf("%s\n -- conntrack summary --\n%s", stdout, summary)
+	}
 	return nil, types.Result{Data: stdout}, nil
 }
 
 // getConntrackUsingCLI executes conntrack CLI commands.
-func (s *MCPServer) getConntrackUsingCLI(ctx context.Context, namespace, node, command, filterParameters string) (string, error) {
+func (s *MCPServer) getConntrackUsingCLI(ctx context.Context, namespace, node, command, filterParameters string) (string, string, error) {
 	cmd := commandbuilder.NewCommand("conntrack")
 	switch command {
 	case "-L", "--dump":
@@ -75,7 +88,7 @@ func (s *MCPServer) getConntrackUsingCLI(ctx context.Context, namespace, node, c
 
 // getConntrackFromFile parses /proc/net/nf_conntrack directly.
 // TODO: Add filter support while getting conntrack entries from /proc/net/nf_conntrack.
-func (s *MCPServer) getConntrackFromFile(ctx context.Context, namespace, node string) (string, error) {
+func (s *MCPServer) getConntrackFromFile(ctx context.Context, namespace, node string) (string, string, error) {
 	cmd := commandbuilder.NewCommand("cat")
 	cmd.Add(conntrackSystemFile)
 	return s.executeCommand(ctx, namespace, node, cmd.Build())

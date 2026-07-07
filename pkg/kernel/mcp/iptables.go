@@ -51,9 +51,13 @@ func (s *MCPServer) GetIptables(ctx context.Context, req *mcp.CallToolRequest, i
 	// FilterParameters are invalid with -S/--list-rules command
 	cmd.AddIf(in.FilterParameters != "" && command != "-S" && command != "--list-rules", strings.Fields(in.FilterParameters)...)
 
-	stdout, err := s.executeCommand(ctx, in.Namespace, in.Node, cmd.Build())
+	stdout, stderr, err := s.executeCommand(ctx, in.Namespace, in.Node, cmd.Build())
 	if err != nil {
 		return nil, types.Result{}, fmt.Errorf("error while getting list of iptables rules: %w", err)
+	}
+
+	if stderr != "" {
+		return nil, types.Result{}, fmt.Errorf("error while running command: %s", stderr)
 	}
 
 	// Strip empty lines from the output

@@ -187,22 +187,19 @@ default via 10.0.0.254 dev br-ex proto dhcp src 10.0.0.10 metric 48
 }
 
 // executeCommand executes a command on a node via kubectl debug
-func (s *MCPServer) executeCommand(ctx context.Context, namespace, node string, command []string) (string, error) {
+func (s *MCPServer) executeCommand(ctx context.Context, namespace, node string, command []string) (string, string, error) {
 	stdout, stderr, err := s.runDebugNodeCommand(ctx, namespace, node, s.cfg.Image, command, "", "", 0)
 	if err != nil {
-		return "", fmt.Errorf("error while establishing tty connection to the node: %w", err)
+		return "", "", fmt.Errorf("error while establishing tty connection to the node: %w", err)
 	}
 
 	// Filter out warning lines from stderr
 	if stderr != "" {
-		stderr := filterWarnings(stderr)
-		if stderr != "" {
-			return "", fmt.Errorf("error while running command: %s", stderr)
-		}
+		stderr = filterWarnings(stderr)
 	}
 
 	// Filter out warning lines from stdout
 	stdout = filterWarnings(stdout)
 
-	return stdout, nil
+	return stdout, stderr, nil
 }

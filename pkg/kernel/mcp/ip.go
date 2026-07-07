@@ -43,9 +43,13 @@ func (s *MCPServer) GetIPCommandOutput(ctx context.Context, req *mcp.CallToolReq
 	cmd.Add(strings.Fields(in.Command)...)
 	cmd.AddIfNotEmpty(in.FilterParameters, strings.Fields(in.FilterParameters)...)
 
-	stdout, err := s.executeCommand(ctx, in.Namespace, in.Node, cmd.Build())
+	stdout, stderr, err := s.executeCommand(ctx, in.Namespace, in.Node, cmd.Build())
 	if err != nil {
 		return nil, types.Result{}, fmt.Errorf("error while getting ip data: %w", err)
+	}
+
+	if stderr != "" {
+		return nil, types.Result{}, fmt.Errorf("error while running command: %s", stderr)
 	}
 
 	// Strip empty lines from the output

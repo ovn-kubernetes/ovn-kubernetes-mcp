@@ -58,7 +58,7 @@ func (s *MCPServer) GetConntrack(ctx context.Context, req *mcp.CallToolRequest, 
 	// Strip empty lines from the output
 	lines := utils.StripEmptyLines(strings.Split(stdout, "\n"))
 	// Apply the head and tail parameters to the lines
-	lines = in.HeadTailParams.Apply(lines, defaultMaxOutputLines)
+	lines = in.HeadTailParams.Apply(lines, DefaultMaxOutputLines)
 	// Join the lines back into a single string
 	stdout = strings.Join(lines, "\n")
 	// If conntrack summary is present, add it to the output

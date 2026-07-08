@@ -120,7 +120,7 @@ Parameters:
 Example output:
 {
   "output": "a1b2c3d4-5678-90ab-cdef-1234567890ab\n    Bridge br-int\n        Port ovn-k8s-mp0\n            Interface ovn-k8s-mp0\n                type: internal\n        Port br-int\n            Interface br-int\n                type: internal\n    ovs_version: \"2.17.0\""
-}`, defaultMaxLines),
+}`, DefaultMaxLines),
 		}, s.Show)
 
 	mcp.AddTool(server,
@@ -146,7 +146,7 @@ Example output:
     "cookie=0x0, duration=123.456s, table=0, n_packets=100, n_bytes=10000, priority=100,in_port=1 actions=output:2",
     "cookie=0x0, duration=123.456s, table=0, n_packets=50, n_bytes=5000, priority=90,in_port=2 actions=output:1"
   ]
-}`, defaultMaxLines),
+}`, DefaultMaxLines),
 		}, s.DumpFlows)
 
 	mcp.AddTool(server,
@@ -174,7 +174,7 @@ Example output:
     "tcp,orig=(src=10.244.0.5,dst=10.96.0.1,sport=45678,dport=443),reply=(src=10.96.0.1,dst=10.244.0.5,sport=443,dport=45678)",
     "udp,orig=(src=10.244.0.3,dst=8.8.8.8,sport=53214,dport=53),reply=(src=8.8.8.8,dst=10.244.0.3,sport=53,dport=53214)"
   ]
-}`, defaultMaxLines),
+}`, DefaultMaxLines),
 		}, s.DumpConntrack)
 
 	mcp.AddTool(server,
@@ -208,7 +208,7 @@ Example output:
   "bridge": "br-int",
   "flow": "in_port=1,ip,nw_src=10.244.0.5,nw_dst=10.96.0.1",
   "output": "Flow: ip,in_port=1,nw_src=10.244.0.5,nw_dst=10.96.0.1\n\nbridge(\"br-int\")\n-------------\n 0. priority 100\n    resubmit(,10)\n10. ip,nw_dst=10.96.0.1, priority 200\n    load:0x1->NXM_NX_REG0[]\n    resubmit(,20)\n...\nFinal flow: ...\nDatapath actions: ..."
-}`, defaultMaxLines),
+}`, DefaultMaxLines),
 		}, s.DumpOfprotoTrace)
 }
 
@@ -251,7 +251,7 @@ func (s *MCPServer) Show(ctx context.Context, req *mcp.CallToolRequest,
 	lines := utils.StripEmptyLines(strings.Split(stdout, "\n"))
 
 	// Apply the head and tail parameters to the lines
-	lines = in.HeadTailParams.Apply(lines, defaultMaxLines)
+	lines = in.HeadTailParams.Apply(lines, DefaultMaxLines)
 
 	// Join all lines into a single output string
 	result.Output = strings.Join(lines, "\n")
@@ -343,7 +343,7 @@ func (s *MCPServer) DumpFlows(ctx context.Context, req *mcp.CallToolRequest,
 	}
 
 	// Apply the head and tail parameters to the flows
-	flows = in.HeadTailParams.Apply(flows, defaultMaxLines)
+	flows = in.HeadTailParams.Apply(flows, DefaultMaxLines)
 
 	result.Flows = flows
 	return nil, result, nil
@@ -389,7 +389,7 @@ func (s *MCPServer) DumpConntrack(ctx context.Context, req *mcp.CallToolRequest,
 	}
 
 	// Apply the head and tail parameters to the entries
-	entries = in.HeadTailParams.Apply(entries, defaultMaxLines)
+	entries = in.HeadTailParams.Apply(entries, DefaultMaxLines)
 
 	result.Entries = entries
 	return nil, result, nil
@@ -436,7 +436,7 @@ func (s *MCPServer) DumpOfprotoTrace(ctx context.Context, req *mcp.CallToolReque
 	}
 
 	// Apply the head and tail parameters to the lines
-	lines = in.HeadTailParams.Apply(lines, defaultMaxLines)
+	lines = in.HeadTailParams.Apply(lines, DefaultMaxLines)
 
 	// Join all lines into a single output string
 	result.Output = strings.Join(lines, "\n")

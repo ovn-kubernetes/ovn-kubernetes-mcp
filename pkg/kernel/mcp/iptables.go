@@ -63,7 +63,7 @@ func (s *MCPServer) GetIptables(ctx context.Context, req *mcp.CallToolRequest, i
 	// Strip empty lines from the output
 	lines := utils.StripEmptyLines(strings.Split(stdout, "\n"))
 	// Apply the head and tail parameters to the lines
-	lines = in.HeadTailParams.Apply(lines, defaultMaxOutputLines)
+	lines = in.HeadTailParams.Apply(lines, DefaultMaxOutputLines)
 	// Join the lines back into a single string
 	stdout = strings.Join(lines, "\n")
 	return nil, types.Result{Data: stdout}, nil

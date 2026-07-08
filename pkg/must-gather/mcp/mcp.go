@@ -102,7 +102,7 @@ Examples:
 - Get specific container logs: {"must_gather_path": "/path/to/must-gather", "namespace": "default", "name": "my-pod", "container": "my-container"}
 - Search for errors: {"must_gather_path": "/path/to/must-gather", "namespace": "default", "name": "my-pod", "pattern": "error|Error|ERROR"}
 - Get last 50 lines: {"must_gather_path": "/path/to/must-gather", "namespace": "default", "name": "my-pod", "tail": 50}
-- Get previous container logs: {"must_gather_path": "/path/to/must-gather", "namespace": "default", "name": "my-pod", "previous": true}`, defaultMaxLines, defaultMaxLines),
+- Get previous container logs: {"must_gather_path": "/path/to/must-gather", "namespace": "default", "name": "my-pod", "previous": true}`, DefaultMaxLines, DefaultMaxLines),
 	}, s.GetPodLogs)
 
 	mcp.AddTool(server, &mcp.Tool{

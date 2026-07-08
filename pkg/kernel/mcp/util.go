@@ -10,8 +10,8 @@ import (
 )
 
 const (
-	// defaultMaxOutputLines defines the maximum number of lines to return from command output
-	defaultMaxOutputLines = 100
+	// DefaultMaxOutputLines defines the maximum number of lines to return from command output
+	DefaultMaxOutputLines = 100
 )
 
 // ConntrackSummaryPattern matches conntrack informational stderr printed on successful -L/--dump.

@@ -10,7 +10,8 @@ import (
 	"github.com/ovn-kubernetes/ovn-kubernetes-mcp/pkg/utils"
 )
 
-const defaultMaxLines = 100
+// DefaultMaxLines defines the maximum number of lines to return from command output
+const DefaultMaxLines = 100
 
 // GetPodLogs uses the omc command to get the logs of a pod. It will return an error if the
 // must gather path is not valid or the pod logs are not found.
@@ -35,7 +36,7 @@ func (s *MustGatherMCPServer) GetPodLogs(ctx context.Context, req *mcp.CallToolR
 	}
 
 	// Apply the head and tail parameters to the logs
-	lines = in.HeadTailParams.Apply(lines, defaultMaxLines)
+	lines = in.HeadTailParams.Apply(lines, DefaultMaxLines)
 
 	return nil, types.GetPodLogsResult{Logs: lines}, nil
 }

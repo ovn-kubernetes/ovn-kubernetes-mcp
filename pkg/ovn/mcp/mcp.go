@@ -54,7 +54,7 @@ Example output for nbdb:
 {
   "database": "nbdb",
   "output": "switch 1234-5678 (node1)\n    port node1-k8s\n        addresses: [\"00:00:00:00:00:01\"]\n..."
-}`, defaultMaxLines),
+}`, DefaultMaxLines),
 		}, s.Show)
 
 	mcp.AddTool(server,
@@ -106,7 +106,7 @@ Example getting specific columns:
   "table": "Logical_Switch",
   "columns": "name,ports",
   "output": "name: ovn-worker\nports: [uuid1, uuid2]\n\nname: join\nports: [uuid3]"
-}`, defaultMaxLines),
+}`, DefaultMaxLines),
 		}, s.Get)
 
 	mcp.AddTool(server,
@@ -134,7 +134,7 @@ Example output:
     "table=0 (ls_in_port_sec_l2), priority=100, match=(inport == \"pod1\"), action=(next;)",
     "table=1 (ls_in_port_sec_ip), priority=90, match=(ip4), action=(next;)"
   ]
-}`, defaultMaxLines),
+}`, DefaultMaxLines),
 		}, s.ListLogicalFlows)
 
 	mcp.AddTool(server,
@@ -169,7 +169,7 @@ Example output:
   "datapath": "node1",
   "microflow": "inport==\"pod1\" && ...",
   "output": "ingress(dp=\"node1\", inport=\"pod1\")\n  0. ls_in_port_sec_l2: inport == \"pod1\", priority 50, uuid 1234\n     next;\n..."
-}`, defaultMaxLines),
+}`, DefaultMaxLines),
 		}, s.Trace)
 }
 
@@ -199,7 +199,7 @@ func (s *MCPServer) Show(ctx context.Context, req *mcp.CallToolRequest,
 	lines := utils.StripEmptyLines(strings.Split(stdout, "\n"))
 
 	// Apply the head and tail parameters to the lines
-	lines = in.HeadTailParams.Apply(lines, defaultMaxLines)
+	lines = in.HeadTailParams.Apply(lines, DefaultMaxLines)
 
 	// Join all lines into a single output string
 	result.Output = strings.Join(lines, "\n")
@@ -276,7 +276,7 @@ func (s *MCPServer) Get(ctx context.Context, req *mcp.CallToolRequest,
 	}
 
 	// Apply the head and tail parameters to the lines
-	lines = in.HeadTailParams.Apply(lines, defaultMaxLines)
+	lines = in.HeadTailParams.Apply(lines, DefaultMaxLines)
 
 	result.Output = strings.Join(lines, "\n")
 	return nil, result, nil
@@ -322,7 +322,7 @@ func (s *MCPServer) ListLogicalFlows(ctx context.Context, req *mcp.CallToolReque
 	}
 
 	// Apply the head and tail parameters to the lines
-	lines = in.HeadTailParams.Apply(lines, defaultMaxLines)
+	lines = in.HeadTailParams.Apply(lines, DefaultMaxLines)
 
 	result.Flows = lines
 	return nil, result, nil
@@ -378,7 +378,7 @@ func (s *MCPServer) Trace(ctx context.Context, req *mcp.CallToolRequest,
 	}
 
 	// Apply the head and tail parameters to the lines
-	lines = in.HeadTailParams.Apply(lines, defaultMaxLines)
+	lines = in.HeadTailParams.Apply(lines, DefaultMaxLines)
 
 	result.Output = strings.Join(lines, "\n")
 	return nil, result, nil

@@ -7,7 +7,8 @@ import (
 	"github.com/ovn-kubernetes/ovn-kubernetes-mcp/pkg/utils"
 )
 
-const defaultMaxLines = 100
+// DefaultMaxLines defines the maximum number of lines to return from command output
+const DefaultMaxLines = 100
 
 // validateDatabase validates that the database is a valid OVN database.
 func validateDatabase(db ovntypes.Database) error {

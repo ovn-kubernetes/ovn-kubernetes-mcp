@@ -68,7 +68,7 @@ Example:
 
 Example output:
 tcp 6 91 ESTABLISHED src=1.2.3.4 dst=5.6.7.8 sport=32000 dport=10250 src=5.6.7.8 dst=1.2.3.4  sport=10250 dport=32000 [ASSURED] mark=0 secctx=system_u:object_r:unlabeled_t:s0 use=2
-`, defaultMaxOutputLines, int(timeout.MaxTimeout.Seconds())),
+`, DefaultMaxOutputLines, int(timeout.MaxTimeout.Seconds())),
 		}, s.GetConntrack)
 	// get-iptables tool registration
 	mcp.AddTool(server,
@@ -108,7 +108,7 @@ Example output:
 Chain POSTROUTING (policy ACCEPT 675K packets, 41M bytes)
  pkts bytes target     prot opt in     out     source               destination         
  675K   41M OVN-KUBE-EGRESS-IP-MULTI-NIC  all  --  *      *       0.0.0.0/0            0.0.0.0/0     							
-`, defaultMaxOutputLines, int(timeout.MaxTimeout.Seconds())),
+`, DefaultMaxOutputLines, int(timeout.MaxTimeout.Seconds())),
 		}, s.GetIptables)
 	// get-nft tool registration
 	mcp.AddTool(server,
@@ -143,7 +143,7 @@ Example:
 - node='ovn-control-plane', command='list tables', address_families='inet'
 Example output:
 table inet ovn-kubernetes
-`, defaultMaxOutputLines, int(timeout.MaxTimeout.Seconds())),
+`, DefaultMaxOutputLines, int(timeout.MaxTimeout.Seconds())),
 		}, s.GetNFT)
 	// get-ip tool registration
 	mcp.AddTool(server,
@@ -182,7 +182,7 @@ Example:
 - node='ovn-control-plane', options="-4", command='route show', filter_parameters='table all'
 Example output:
 default via 10.0.0.254 dev br-ex proto dhcp src 10.0.0.10 metric 48
-`, defaultMaxOutputLines, int(timeout.MaxTimeout.Seconds())),
+`, DefaultMaxOutputLines, int(timeout.MaxTimeout.Seconds())),
 		}, s.GetIPCommandOutput)
 }
 

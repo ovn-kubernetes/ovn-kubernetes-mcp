@@ -11,6 +11,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
+	mcpKernel "github.com/ovn-kubernetes/ovn-kubernetes-mcp/pkg/kernel/mcp"
 	"github.com/ovn-kubernetes/ovn-kubernetes-mcp/pkg/kernel/types"
 	"github.com/ovn-kubernetes/ovn-kubernetes-mcp/test/e2e/utils"
 )
@@ -266,6 +267,46 @@ var _ = Describe("Kernel Tools", func() {
 	})
 
 	Context("get-conntrack", func() {
+		It("should retrieve connection tracking list from a node", func() {
+			By("Running get-conntrack to list connections")
+			output, err := mcpInspector.
+				MethodCall(getConntrackToolName, map[string]any{
+					"node":    nodeName,
+					"command": "-L",
+				}).Execute()
+			Expect(err).NotTo(HaveOccurred())
+			Expect(output).NotTo(BeEmpty())
+
+			By("Checking the result contains connection list")
+			result := utils.UnmarshalCallToolResult[types.Result](output)
+			Expect(result.Data).NotTo(BeEmpty())
+			// List output contains connection information from conntrack CLI or /proc/net/nf_conntrack.
+			// At least one marker must be present.
+			conntrackListMarkers := []string{
+				"src=", "dst=", "sport=", "dport=", "proto=", "state=",
+				"ESTABLISHED", "TIME_WAIT", "CLOSE",
+			}
+			Expect(result.Data).To(Satisfy(func(data string) bool {
+				for _, marker := range conntrackListMarkers {
+					if strings.Contains(data, marker) {
+						return true
+					}
+				}
+				return false
+			}))
+
+			// If the summary is present, check if it matches the expected format
+			// The summary format is as follows:
+			// -- conntrack summary --
+			// conntrack v<version> (conntrack-tools): <count> flow entries have been shown.
+			if strings.Contains(result.Data, "-- conntrack summary --") {
+				By("Checking the summary matches the expected format")
+				lines := strings.Split(strings.TrimSpace(result.Data), "\n")
+				summary := lines[len(lines)-1]
+				Expect(summary).To(MatchRegexp(mcpKernel.ConntrackSummaryPattern.String()))
+			}
+		})
+
 		It("should retrieve connection tracking count from a node", func() {
 			By("Running get-conntrack to count connections")
 			output, err := mcpInspector.

@@ -23,6 +23,15 @@ const (
 
 // Tcpdump executes the tcpdump packet capture tool on a node or inside a pod.
 func (s *MCPServer) Tcpdump(ctx context.Context, req *mcp.CallToolRequest, in types.TcpdumpParams) (*mcp.CallToolResult, types.CommandResult, error) {
+	if in.TargetType == "" || (in.TargetType != "node" && in.TargetType != "pod") {
+		return nil, types.CommandResult{}, fmt.Errorf("target_type is required and must be 'node' or 'pod'")
+	}
+	if in.Name == "" {
+		return nil, types.CommandResult{}, fmt.Errorf("name is required when target_type is '%s'", in.TargetType)
+	}
+	if in.TargetType == "pod" && in.Namespace == "" {
+		return nil, types.CommandResult{}, fmt.Errorf("namespace is required when target_type is 'pod'")
+	}
 	if err := validateInterface(in.Interface); err != nil {
 		return nil, types.CommandResult{}, err
 	}
@@ -61,13 +70,13 @@ func (s *MCPServer) Tcpdump(ctx context.Context, req *mcp.CallToolRequest, in ty
 
 	switch in.TargetType {
 	case "node":
-		stdout, stderr, err := s.runDebugNodeCommand(ctx, in.NodePodNamespace, in.NodeName, s.cfg.TcpdumpImage, cmd.Build(), "", "", 0)
+		stdout, stderr, err := s.runDebugNodeCommand(ctx, in.Namespace, in.Name, s.cfg.TcpdumpImage, cmd.Build(), "", "", 0)
 		if err != nil {
 			return nil, types.CommandResult{}, err
 		}
 		return nil, types.CommandResult{Output: stdout, Stderr: stderr}, nil
 	case "pod":
-		stdout, stderr, err := s.runPodExecCommand(ctx, in.PodNamespace, in.PodName, in.ContainerName, cmd.Build())
+		stdout, stderr, err := s.runPodExecCommand(ctx, in.Namespace, in.Name, in.ContainerName, cmd.Build())
 		if err != nil {
 			return nil, types.CommandResult{}, err
 		}

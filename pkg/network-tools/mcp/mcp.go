@@ -57,11 +57,9 @@ The image must contain the tcpdump utility
 
 Parameters:
 - target_type: 'node' or 'pod' (required)
-- node_name: Name of the node (required when target_type is 'node')
-- node_pod_namespace (optional): Namespace of the debug pod on which the command is expected to be executed when target_type is 'node'. Default: 'default'
-- pod_name: Name of the pod (required when target_type is 'pod')
-- pod_namespace: Namespace of the pod (required when target_type is 'pod')
-- container_name: Name of the container in the pod (optional, uses default container if not specified)
+- name: Name of the target (node or pod) (required)
+- namespace: Namespace of the target (node or pod). Required when target_type is 'pod'. Optional when target_type is 'node' and defaults to 'default'.
+- container_name: Name of the container in the pod when target_type is 'pod' (optional, uses default container if not specified)
 - interface: Network interface name or 'any' (optional, uses default if not specified)
 - packet_count: Number of packets to capture (default: 100, max: 1000)
 - bpf_filter: BPF filter expression to match packets (optional, e.g., "tcp and dst port 8080", "host 10.0.0.1")
@@ -69,9 +67,9 @@ Parameters:
 - timeout_seconds (optional): Timeout in seconds for the command execution. If not specified, server default timeout is used. The maximum value is %d seconds.
 
 Examples:
-- Capture on node: {"target_type": "node", "node_name": "worker-1", "interface": "eth0", "packet_count": 100, "bpf_filter": "tcp port 80"}
-- Capture in pod: {"target_type": "pod", "pod_name": "my-pod", "pod_namespace": "default", "interface": "eth0", "packet_count": 100, "bpf_filter": "host 10.0.0.1"}
-- Capture DNS: {"target_type": "node", "node_name": "worker-1", "interface": "any", "packet_count": 50, "bpf_filter": "port 53"}`,
+- Capture on node: {"target_type": "node", "name": "worker-1", "interface": "eth0", "packet_count": 100, "bpf_filter": "tcp port 80"}
+- Capture in pod: {"target_type": "pod", "name": "my-pod", "namespace": "default", "interface": "eth0", "packet_count": 100, "bpf_filter": "host 10.0.0.1"}
+- Capture DNS: {"target_type": "node", "name": "worker-1", "interface": "any", "packet_count": 50, "bpf_filter": "port 53"}`,
 				int(timeout.MaxTimeout.Seconds())),
 		}, s.Tcpdump)
 	mcp.AddTool(server,

@@ -14,13 +14,11 @@ type TcpdumpParams struct {
 
 	TargetType string `json:"target_type"`
 
-	// Node-specific fields
-	NodeName         string `json:"node_name,omitempty"`
-	NodePodNamespace string `json:"node_pod_namespace,omitempty"`
+	// Combined node and pod fields
+	Name      string `json:"name"`
+	Namespace string `json:"namespace,omitempty"`
 
-	// Pod-specific fields
-	PodName       string `json:"pod_name,omitempty"`
-	PodNamespace  string `json:"pod_namespace,omitempty"`
+	// Pod-specific field
 	ContainerName string `json:"container_name,omitempty"`
 
 	Interface   string `json:"interface,omitempty"`

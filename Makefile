@@ -146,8 +146,8 @@ undeploy-kind-ovnk:
 	@$(GIT_ROOT)/hack/undeploy-kind-ovnk.sh
 
 NVM_VERSION := 0.40.4
-NODE_VERSION := 24.15.0
-NPM_VERSION := 11.13.0
+NODE_VERSION := 26.5.0
+NPM_VERSION := 12.0.1
 GINKGO_VERSION := v2.28.3
 MCP_MODE ?= live-cluster
 

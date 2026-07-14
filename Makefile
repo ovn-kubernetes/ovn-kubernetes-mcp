@@ -148,7 +148,7 @@ undeploy-kind-ovnk:
 NVM_VERSION := 0.40.4
 NODE_VERSION := 26.5.0
 NPM_VERSION := 12.0.1
-GINKGO_VERSION := v2.28.3
+GINKGO_VERSION := v2.32.0
 MCP_MODE ?= live-cluster
 
 .PHONY: run-e2e

@@ -1,76 +1,93 @@
 package types
 
 import (
-	k8stypes "github.com/ovn-kubernetes/ovn-kubernetes-mcp/pkg/kubernetes/types"
 	"github.com/ovn-kubernetes/ovn-kubernetes-mcp/pkg/utils/headtail"
 	"github.com/ovn-kubernetes/ovn-kubernetes-mcp/pkg/utils/pattern"
 )
 
-// BridgeResult contains the list of OVS bridges found on a node.
-type BridgeResult struct {
-	Bridges []string `json:"bridges"`
-}
+// VsctlAction selects which ovs-vsctl subcommand the consolidated tool runs.
+type VsctlAction string
 
-// ShowParams are the parameters for ovs-vsctl show command.
-type ShowParams struct {
-	k8stypes.NamespacedNameParams
+const (
+	VsctlShow       VsctlAction = "show"
+	VsctlListBr     VsctlAction = "list-br"
+	VsctlListPorts  VsctlAction = "list-ports"
+	VsctlListIfaces VsctlAction = "list-ifaces"
+)
+
+// OfctlAction selects which ovs-ofctl subcommand the consolidated tool runs.
+type OfctlAction string
+
+const (
+	OfctlDumpFlows OfctlAction = "dump-flows"
+)
+
+// AppctlAction selects which ovs-appctl subcommand the consolidated tool runs.
+type AppctlAction string
+
+const (
+	AppctlDumpConntrack AppctlAction = "dpctl/dump-conntrack"
+	AppctlOfprotoTrace  AppctlAction = "ofproto/trace"
+)
+
+// VsctlParams are the parameters for the consolidated ovs-vsctl tool. The
+// Action field selects the subcommand to run. Bridge is required when Action
+// is "list-ports" or "list-ifaces". HeadTailParams is only applied when Action
+// is "show".
+type VsctlParams struct {
+	Namespace string `json:"namespace"`
+	Name      string `json:"name"`
+	Action    string `json:"action"`
+	Bridge    string `json:"bridge,omitempty"`
 	headtail.HeadTailParams
 }
 
-// ShowResult contains the output of ovs-vsctl show command.
-type ShowResult struct {
-	Output string `json:"output"`
+// VsctlResult holds the response of the consolidated ovs-vsctl tool. Only the
+// field(s) relevant to the invoked action are populated.
+type VsctlResult struct {
+	Output     string   `json:"output,omitempty"`     // populated for action="show"
+	Bridges    []string `json:"bridges,omitempty"`    // populated for action="list-br"
+	Ports      []string `json:"ports,omitempty"`      // populated for action="list-ports"
+	Interfaces []string `json:"interfaces,omitempty"` // populated for action="list-ifaces"
 }
 
-// PortResult contains the list of ports attached to an OVS bridge.
-type PortResult struct {
-	Ports []string `json:"ports"`
-}
-
-// InterfaceResult contains the list of interfaces attached to an OVS bridge.
-type InterfaceResult struct {
-	Interfaces []string `json:"interfaces"`
-}
-
-// FlowsResult contains the OpenFlow flows from a specific OVS bridge.
-type FlowsResult struct {
-	Flows  []string `json:"flows"`
-	Bridge string   `json:"bridge"`
-}
-
-// ConntrackResult contains connection tracking entries from the OVS datapath.
-type ConntrackResult struct {
-	Entries []string `json:"entries"`
-}
-
-// GetOVSCommandParams are the parameters for OVS related commands.
-type GetOVSCommandParams struct {
-	k8stypes.NamespacedNameParams
-	Bridge string `json:"bridge"`
+// OfctlParams are the parameters for the consolidated ovs-ofctl tool. The
+// Action field selects the subcommand to run.
+type OfctlParams struct {
+	Namespace string `json:"namespace"`
+	Name      string `json:"name"`
+	Action    string `json:"action"`
+	Bridge    string `json:"bridge"`
 	pattern.PatternParams
 	headtail.HeadTailParams
 }
 
-// DumpConntrackParams are the parameters for dump-conntrack command.
-type DumpConntrackParams struct {
-	k8stypes.NamespacedNameParams
-	pattern.PatternParams
-	headtail.HeadTailParams
+// OfctlResult holds the response of the consolidated ovs-ofctl tool.
+type OfctlResult struct {
+	Bridge string   `json:"bridge,omitempty"`
+	Flows  []string `json:"flows,omitempty"` // populated for action="dump-flows"
+}
+
+// AppctlParams are the parameters for the consolidated ovs-appctl tool. The
+// Action field selects the subcommand to run. Bridge and Flow are required
+// when Action is "ofproto/trace". AdditionalParams is only used when Action is
+// "dpctl/dump-conntrack".
+type AppctlParams struct {
+	Namespace        string   `json:"namespace"`
+	Name             string   `json:"name"`
+	Action           string   `json:"action"`
+	Bridge           string   `json:"bridge,omitempty"`
+	Flow             string   `json:"flow,omitempty"`
 	AdditionalParams []string `json:"additional_params,omitempty"`
-}
-
-// OfprotoTraceParams are the parameters for ofproto/trace command.
-type OfprotoTraceParams struct {
-	k8stypes.NamespacedNameParams
-	Bridge string `json:"bridge"`
-	Flow   string `json:"flow"`
 	pattern.PatternParams
 	headtail.HeadTailParams
 }
 
-// OfprotoTraceResult returns the complete trace output.
-type OfprotoTraceResult struct {
-	Bridge string `json:"bridge"`
-	Flow   string `json:"flow"`
-	Output string `json:"output"`
+// AppctlResult holds the response of the consolidated ovs-appctl tool. Only
+// the field(s) relevant to the invoked action are populated.
+type AppctlResult struct {
+	Entries []string `json:"entries,omitempty"` // populated for action="dpctl/dump-conntrack"
+	Bridge  string   `json:"bridge,omitempty"`  // populated for action="ofproto/trace"
+	Flow    string   `json:"flow,omitempty"`    // populated for action="ofproto/trace"
+	Output  string   `json:"output,omitempty"`  // populated for action="ofproto/trace"
 }

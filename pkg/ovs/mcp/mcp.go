@@ -6,9 +6,10 @@ import (
 	"strings"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
-	k8stypes "github.com/ovn-kubernetes/ovn-kubernetes-mcp/pkg/kubernetes/types"
 	ovstypes "github.com/ovn-kubernetes/ovn-kubernetes-mcp/pkg/ovs/types"
 	"github.com/ovn-kubernetes/ovn-kubernetes-mcp/pkg/utils"
+	"github.com/ovn-kubernetes/ovn-kubernetes-mcp/pkg/utils/headtail"
+	"github.com/ovn-kubernetes/ovn-kubernetes-mcp/pkg/utils/pattern"
 )
 
 type RunPodExecCommandFuncType func(ctx context.Context, namespace, name, container string, command []string) (string, string, error)
@@ -30,114 +31,70 @@ func NewMCPServer(runPodExecCommand RunPodExecCommandFuncType) (*MCPServer, erro
 
 // AddTools registers OVS tools with the MCP server
 func (s *MCPServer) AddTools(server *mcp.Server) {
+	// ovs-vsctl tool registration
 	mcp.AddTool(server,
 		&mcp.Tool{
-			Name: "ovs-list-br",
-			Description: `List all OVS bridges on a specific pod.
-
-Runs 'ovs-vsctl list-br' command and returns the names of all configured bridges.
-
+			Name: "ovs-vsctl",
+			Description: fmt.Sprintf(`ovs-vsctl allows to run an ovs-vsctl command against an ovnkube-node pod to inspect the OVS switch configuration.
 Parameters:
-- namespace: Kubernetes namespace of the OVS pod
-- name: Name of the pod running OVS
+- namespace (required): Kubernetes namespace of the OVS pod
+- name (required): Name of the pod running OVS
+- action (required): The ovs-vsctl subcommand to run.
+                     show         : Display a comprehensive overview of OVS configuration in a hierarchical format (bridges, ports, interfaces, controllers).
+                     list-br      : List all OVS bridges on the pod.
+                     list-ports   : List all ports on a specific OVS bridge (requires bridge).
+                     list-ifaces  : List all interfaces on a specific OVS bridge (requires bridge).
+- bridge (required for "list-ports" and "list-ifaces"): Name of the OVS bridge (e.g., "br-int")
+- head (optional, only used when action is "show"): Return only first N lines. Default: %d lines if tail is not specified
+- tail (optional, only used when action is "show"): Return only last N lines
+- apply_tail_first (optional, only used when action is "show"): If both head and tail are set and apply_tail_first is true, apply tail before head. Default: false
 
-Example output:
+Example:
+- namespace='ovn-kubernetes', name='ovnkube-node-xxxxx', action='show'
+- namespace='ovn-kubernetes', name='ovnkube-node-xxxxx', action='list-br'
+- namespace='ovn-kubernetes', name='ovnkube-node-xxxxx', action='list-ports', bridge='br-int'
+- namespace='ovn-kubernetes', name='ovnkube-node-xxxxx', action='list-ifaces', bridge='br-int'
+
+Example output (action='show'):
 {
-  "bridges": [
-    "br-int",
-    "br-ex",
-    "br-local"
-  ]
-}`,
-		}, s.ListBridges)
+  "output": "a1b2c3d4-5678-90ab-cdef-1234567890ab\n    Bridge br-int\n        Port ovn-k8s-mp0\n            Interface ovn-k8s-mp0\n                type: internal\n    ovs_version: \"2.17.0\""
+}
 
-	mcp.AddTool(server,
-		&mcp.Tool{
-			Name: "ovs-list-ports",
-			Description: `List all ports on a specific OVS bridge.
-
-Runs 'ovs-vsctl list-ports' command and returns the names of all ports attached to the specified bridge.
-
-Parameters:
-- namespace: Kubernetes namespace of the OVS pod
-- name: Name of the pod running OVS
-- bridge: Name of the OVS bridge (e.g., "br-int")
-
-Example output:
+Example output (action='list-br'):
 {
-  "ports": [
-    "patch-br-int-to-br-ex",
-    "veth1234",
-    "ovn-k8s-mp0"
-  ]
-}`,
-		}, s.ListPorts)
+  "bridges": ["br-int", "br-ex", "br-local"]
+}
 
-	mcp.AddTool(server,
-		&mcp.Tool{
-			Name: "ovs-list-ifaces",
-			Description: `List all interfaces on a specific OVS bridge.
-
-Runs 'ovs-vsctl list-ifaces' command and returns the names of all interfaces attached to the specified bridge.
-
-Parameters:
-- namespace: Kubernetes namespace of the OVS pod
-- name: Name of the pod running OVS
-- bridge: Name of the OVS bridge (e.g., "br-int")
-
-Example output:
+Example output (action='list-ports'):
 {
-  "interfaces": [
-    "patch-br-int-to-br-ex",
-    "veth1234",
-    "ovn-k8s-mp0"
-  ]
-}`,
-		}, s.ListInterfaces)
+  "ports": ["patch-br-int-to-br-ex", "veth1234", "ovn-k8s-mp0"]
+}
 
+Example output (action='list-ifaces'):
+{
+  "interfaces": ["patch-br-int-to-br-ex", "veth1234", "ovn-k8s-mp0"]
+}
+`, DefaultMaxLines),
+		}, s.Vsctl)
+
+	// ovs-ofctl tool registration
 	mcp.AddTool(server,
 		&mcp.Tool{
-			Name: "ovs-vsctl-show",
-			Description: fmt.Sprintf(`Display a comprehensive overview of OVS configuration.
-
-Runs 'ovs-vsctl show' command and returns detailed information about bridges, ports, interfaces,
-controllers, and their configurations in a hierarchical format.
-
-This command is useful for getting a complete view of the OVS switch configuration including:
-- All bridges and their configurations
-- Ports and interfaces attached to each bridge
-- Controller connections and status
-- Interface types and options
-- Port configurations and tags
-
+			Name: "ovs-ofctl",
+			Description: fmt.Sprintf(`ovs-ofctl allows to run an ovs-ofctl command against an ovnkube-node pod to inspect the OpenFlow state of an OVS bridge.
 Parameters:
-- namespace: Kubernetes namespace of the OVS pod
-- name: Name of the pod running OVS
+- namespace (required): Kubernetes namespace of the OVS pod
+- name (required): Name of the pod running OVS
+- action (required): The ovs-ofctl subcommand to run.
+                     dump-flows : Dump the OpenFlow flow entries programmed on the specified bridge.
+- bridge (required): Name of the OVS bridge (e.g., "br-int")
+- pattern (optional): Regex pattern to filter output lines
 - head (optional): Return only first N lines. Default: %d lines if tail is not specified
 - tail (optional): Return only last N lines
 - apply_tail_first (optional): If both head and tail are set and apply_tail_first is true, apply tail before head. Default: false
 
-Example output:
-{
-  "output": "a1b2c3d4-5678-90ab-cdef-1234567890ab\n    Bridge br-int\n        Port ovn-k8s-mp0\n            Interface ovn-k8s-mp0\n                type: internal\n        Port br-int\n            Interface br-int\n                type: internal\n    ovs_version: \"2.17.0\""
-}`, DefaultMaxLines),
-		}, s.Show)
-
-	mcp.AddTool(server,
-		&mcp.Tool{
-			Name: "ovs-ofctl-dump-flows",
-			Description: fmt.Sprintf(`Dump OpenFlow flows from a specific OVS bridge.
-
-Runs 'ovs-ofctl dump-flows' command on the specified bridge and returns the flow entries.
-
-Parameters:
-- namespace: Kubernetes namespace of the OVS pod
-- name: Name of the pod running OVS
-- bridge: Name of the OVS bridge (e.g., "br-int")
-- pattern (optional): Regex pattern to filter flows
-- head (optional): Return only first N lines. Default: %d lines if tail is not specified
-- tail (optional): Return only last N lines
-- apply_tail_first (optional): If both head and tail are set and apply_tail_first is true, apply tail before head. Default: false
+Example:
+- namespace='ovn-kubernetes', name='ovnkube-node-xxxxx', action='dump-flows', bridge='br-int'
 
 Example output:
 {
@@ -146,299 +103,254 @@ Example output:
     "cookie=0x0, duration=123.456s, table=0, n_packets=100, n_bytes=10000, priority=100,in_port=1 actions=output:2",
     "cookie=0x0, duration=123.456s, table=0, n_packets=50, n_bytes=5000, priority=90,in_port=2 actions=output:1"
   ]
-}`, DefaultMaxLines),
-		}, s.DumpFlows)
+}
+`, DefaultMaxLines),
+		}, s.Ofctl)
 
+	// ovs-appctl tool registration
 	mcp.AddTool(server,
 		&mcp.Tool{
-			Name: "ovs-appctl-dump-conntrack",
-			Description: fmt.Sprintf(`Dump connection tracking entries from OVS datapath.
-
-Runs 'ovs-appctl dpctl/dump-conntrack' command and returns the conntrack entries.
-
-Connection tracking (conntrack) maintains state for stateful firewall rules and NAT.
-Each entry shows source/destination IPs, ports, protocol, connection state, and more.
-
+			Name: "ovs-appctl",
+			Description: fmt.Sprintf(`ovs-appctl allows to run an ovs-appctl command against an ovnkube-node pod to interact with the OVS daemons for datapath and OpenFlow debugging.
 Parameters:
-- namespace: Kubernetes namespace of the OVS pod
-- name: Name of the pod running OVS
-- pattern (optional): Regex pattern to filter conntrack entries
+- namespace (required): Kubernetes namespace of the OVS pod
+- name (required): Name of the pod running OVS
+- action (required): The ovs-appctl subcommand to run.
+                     dpctl/dump-conntrack : Dump connection tracking entries from the OVS datapath.
+                     ofproto/trace        : Simulate packet processing through the OpenFlow pipeline (requires bridge and flow).
+- bridge (required for "ofproto/trace"): Name of the OVS bridge (e.g., "br-int")
+- flow (required for "ofproto/trace"): Flow specification describing the packet to trace (e.g., "in_port=1,ip,nw_src=10.244.0.5,nw_dst=10.96.0.1")
+- additional_params (optional, only used when action is "dpctl/dump-conntrack"): Additional CLI arguments to pass to dpctl/dump-conntrack (e.g., ["zone=5"])
+- pattern (optional): Regex pattern to filter output lines
 - head (optional): Return only first N lines. Default: %d lines if tail is not specified
 - tail (optional): Return only last N lines
 - apply_tail_first (optional): If both head and tail are set and apply_tail_first is true, apply tail before head. Default: false
-- additional_params (optional): Additional parameters to pass to dpctl/dump-conntrack command (e.g., ["zone=5"])
 
-Example output:
+Example:
+- namespace='ovn-kubernetes', name='ovnkube-node-xxxxx', action='dpctl/dump-conntrack'
+- namespace='ovn-kubernetes', name='ovnkube-node-xxxxx', action='ofproto/trace', bridge='br-int', flow='in_port=1,ip,nw_src=10.244.0.5,nw_dst=10.96.0.1'
+
+Example output (action='dpctl/dump-conntrack'):
 {
   "entries": [
-    "tcp,orig=(src=10.244.0.5,dst=10.96.0.1,sport=45678,dport=443),reply=(src=10.96.0.1,dst=10.244.0.5,sport=443,dport=45678)",
-    "udp,orig=(src=10.244.0.3,dst=8.8.8.8,sport=53214,dport=53),reply=(src=8.8.8.8,dst=10.244.0.3,sport=53,dport=53214)"
+    "tcp,orig=(src=10.244.0.5,dst=10.96.0.1,sport=45678,dport=443),reply=(src=10.96.0.1,dst=10.244.0.5,sport=443,dport=45678)"
   ]
-}`, DefaultMaxLines),
-		}, s.DumpConntrack)
+}
 
-	mcp.AddTool(server,
-		&mcp.Tool{
-			Name: "ovs-appctl-ofproto-trace",
-			Description: fmt.Sprintf(`Trace a packet through the OpenFlow pipeline.
-
-Runs 'ovs-appctl ofproto/trace' command to simulate packet processing through OpenFlow tables.
-This shows which flows match, what actions are taken, and the final disposition of the packet.
-
-The trace output is essential for debugging flow rules, understanding packet forwarding decisions,
-and troubleshooting connectivity issues.
-
-Parameters:
-- namespace: Kubernetes namespace of the OVS pod
-- name: Name of the pod running OVS
-- bridge: Name of the OVS bridge (e.g., "br-int")
-- flow: Flow specification describing the packet to trace (e.g., "in_port=1,ip,nw_src=10.244.0.5,nw_dst=10.96.0.1")
-- pattern (optional): Regex pattern to filter trace output lines
-- head (optional): Return only first N lines. Default: %d lines if tail is not specified
-- tail (optional): Return only last N lines
-- apply_tail_first (optional): If both head and tail are set and apply_tail_first is true, apply tail before head. Default: false
-
-Flow specification examples:
-- "in_port=1,icmp"
-- "in_port=2,ip,nw_src=192.168.1.10,nw_dst=192.168.1.20"
-- "in_port=3,tcp,nw_src=10.0.0.1,nw_dst=10.0.0.2,tp_src=12345,tp_dst=80"
-
-Example output:
+Example output (action='ofproto/trace'):
 {
   "bridge": "br-int",
   "flow": "in_port=1,ip,nw_src=10.244.0.5,nw_dst=10.96.0.1",
-  "output": "Flow: ip,in_port=1,nw_src=10.244.0.5,nw_dst=10.96.0.1\n\nbridge(\"br-int\")\n-------------\n 0. priority 100\n    resubmit(,10)\n10. ip,nw_dst=10.96.0.1, priority 200\n    load:0x1->NXM_NX_REG0[]\n    resubmit(,20)\n...\nFinal flow: ...\nDatapath actions: ..."
-}`, DefaultMaxLines),
-		}, s.DumpOfprotoTrace)
+  "output": "Flow: ip,in_port=1,nw_src=10.244.0.5,nw_dst=10.96.0.1\n\nbridge(\"br-int\")\n...\nFinal flow: ...\nDatapath actions: ..."
+}
+`, DefaultMaxLines),
+		}, s.Appctl)
 }
 
-func (s *MCPServer) ListBridges(ctx context.Context, req *mcp.CallToolRequest,
-	in k8stypes.NamespacedNameParams) (*mcp.CallToolResult, ovstypes.BridgeResult, error) {
-	result := ovstypes.BridgeResult{
-		Bridges: []string{}, // Initialize with empty slice to ensure valid JSON even on error
-	}
+// Vsctl dispatches to the appropriate ovs-vsctl subcommand based on the
+// required "action" parameter.
+func (s *MCPServer) Vsctl(ctx context.Context, req *mcp.CallToolRequest,
+	in ovstypes.VsctlParams) (*mcp.CallToolResult, ovstypes.VsctlResult, error) {
 
-	// Run ovs-vsctl list-br command
-	stdout, stderr, err := s.runPodExecCommand(ctx, in.Namespace, in.Name, "", []string{"ovs-vsctl", "list-br"})
-	if err != nil {
-		return nil, result, fmt.Errorf("failed to retrieve ovs bridge from pod %s/%s: %w",
-			in.Namespace, in.Name, err)
+	switch ovstypes.VsctlAction(in.Action) {
+	case ovstypes.VsctlShow:
+		output, err := s.show(ctx, in.Namespace, in.Name, in.HeadTailParams)
+		return nil, ovstypes.VsctlResult{Output: output}, err
+
+	case ovstypes.VsctlListBr:
+		bridges, err := s.listBridges(ctx, in.Namespace, in.Name)
+		return nil, ovstypes.VsctlResult{Bridges: bridges}, err
+
+	case ovstypes.VsctlListPorts:
+		ports, err := s.listPorts(ctx, in.Namespace, in.Name, in.Bridge)
+		return nil, ovstypes.VsctlResult{Ports: ports}, err
+
+	case ovstypes.VsctlListIfaces:
+		ifaces, err := s.listInterfaces(ctx, in.Namespace, in.Name, in.Bridge)
+		return nil, ovstypes.VsctlResult{Interfaces: ifaces}, err
+
+	default:
+		return nil, ovstypes.VsctlResult{}, fmt.Errorf(`invalid action %q: must be one of "show", "list-br", "list-ports", "list-ifaces"`, in.Action)
 	}
-	if stderr != "" {
-		return nil, result, fmt.Errorf("failed to retrieve ovs bridge from pod %s/%s: %s",
-			in.Namespace, in.Name, stderr)
-	}
-	bridgeNames := utils.StripEmptyLines(strings.Split(stdout, "\n"))
-	result.Bridges = append(result.Bridges, bridgeNames...)
-	return nil, result, nil
 }
 
-// Show displays a comprehensive overview of OVS configuration.
-func (s *MCPServer) Show(ctx context.Context, req *mcp.CallToolRequest,
-	in ovstypes.ShowParams) (*mcp.CallToolResult, ovstypes.ShowResult, error) {
-	result := ovstypes.ShowResult{}
+// Ofctl dispatches to the appropriate ovs-ofctl subcommand based on the
+// required "action" parameter.
+func (s *MCPServer) Ofctl(ctx context.Context, req *mcp.CallToolRequest,
+	in ovstypes.OfctlParams) (*mcp.CallToolResult, ovstypes.OfctlResult, error) {
 
-	// Run ovs-vsctl show command
-	stdout, stderr, err := s.runPodExecCommand(ctx, in.Namespace, in.Name, "", []string{"ovs-vsctl", "show"})
+	switch ovstypes.OfctlAction(in.Action) {
+	case ovstypes.OfctlDumpFlows:
+		flows, err := s.dumpFlows(ctx, in.Namespace, in.Name, in.Bridge, in.PatternParams, in.HeadTailParams)
+		return nil, ovstypes.OfctlResult{Bridge: in.Bridge, Flows: flows}, err
+
+	default:
+		return nil, ovstypes.OfctlResult{}, fmt.Errorf(`invalid action %q: must be one of "dump-flows"`, in.Action)
+	}
+}
+
+// Appctl dispatches to the appropriate ovs-appctl subcommand based on the
+// required "action" parameter.
+func (s *MCPServer) Appctl(ctx context.Context, req *mcp.CallToolRequest,
+	in ovstypes.AppctlParams) (*mcp.CallToolResult, ovstypes.AppctlResult, error) {
+
+	switch ovstypes.AppctlAction(in.Action) {
+	case ovstypes.AppctlDumpConntrack:
+		entries, err := s.dumpConntrack(ctx, in.Namespace, in.Name, in.AdditionalParams, in.PatternParams, in.HeadTailParams)
+		return nil, ovstypes.AppctlResult{Entries: entries}, err
+
+	case ovstypes.AppctlOfprotoTrace:
+		output, err := s.dumpOfprotoTrace(ctx, in.Namespace, in.Name, in.Bridge, in.Flow, in.PatternParams, in.HeadTailParams)
+		return nil, ovstypes.AppctlResult{Bridge: in.Bridge, Flow: in.Flow, Output: output}, err
+
+	default:
+		return nil, ovstypes.AppctlResult{}, fmt.Errorf(`invalid action %q: must be one of "dpctl/dump-conntrack", "ofproto/trace"`, in.Action)
+	}
+}
+
+// listBridges lists all OVS bridges on the pod using 'ovs-vsctl list-br'.
+func (s *MCPServer) listBridges(ctx context.Context, namespace, name string) ([]string, error) {
+	stdout, stderr, err := s.runPodExecCommand(ctx, namespace, name, "", []string{"ovs-vsctl", "list-br"})
 	if err != nil {
-		return nil, result, fmt.Errorf("failed to retrieve ovs configuration from pod %s/%s: %w",
-			in.Namespace, in.Name, err)
+		return []string{}, fmt.Errorf("failed to retrieve ovs bridge from pod %s/%s: %w",
+			namespace, name, err)
 	}
 	if stderr != "" {
-		return nil, result, fmt.Errorf("failed to retrieve ovs configuration from pod %s/%s: %s",
-			in.Namespace, in.Name, stderr)
+		return []string{}, fmt.Errorf("failed to retrieve ovs bridge from pod %s/%s: %s",
+			namespace, name, stderr)
+	}
+	return utils.StripEmptyLines(strings.Split(stdout, "\n")), nil
+}
+
+// show returns the comprehensive OVS configuration overview via 'ovs-vsctl show'.
+func (s *MCPServer) show(ctx context.Context, namespace, name string, headTailParams headtail.HeadTailParams) (string, error) {
+	stdout, stderr, err := s.runPodExecCommand(ctx, namespace, name, "", []string{"ovs-vsctl", "show"})
+	if err != nil {
+		return "", fmt.Errorf("failed to retrieve ovs configuration from pod %s/%s: %w",
+			namespace, name, err)
+	}
+	if stderr != "" {
+		return "", fmt.Errorf("failed to retrieve ovs configuration from pod %s/%s: %s",
+			namespace, name, stderr)
 	}
 	lines := utils.StripEmptyLines(strings.Split(stdout, "\n"))
-
-	// Apply the head and tail parameters to the lines
-	lines = in.HeadTailParams.Apply(lines, DefaultMaxLines)
-
-	// Join all lines into a single output string
-	result.Output = strings.Join(lines, "\n")
-	return nil, result, nil
+	lines = headTailParams.Apply(lines, DefaultMaxLines)
+	return strings.Join(lines, "\n"), nil
 }
 
-func (s *MCPServer) ListPorts(ctx context.Context, req *mcp.CallToolRequest,
-	in ovstypes.GetOVSCommandParams) (*mcp.CallToolResult, ovstypes.PortResult, error) {
-	result := ovstypes.PortResult{
-		Ports: []string{}, // Initialize with empty slice to ensure valid JSON even on error
+// listPorts lists all ports on a specific OVS bridge via 'ovs-vsctl list-ports'.
+func (s *MCPServer) listPorts(ctx context.Context, namespace, name, bridge string) ([]string, error) {
+	if err := validateBridgeName(bridge); err != nil {
+		return []string{}, err
 	}
-
-	// Validate bridge name
-	if err := validateBridgeName(in.Bridge); err != nil {
-		return nil, result, err
-	}
-
-	// Run ovs-vsctl list-ports command
-	stdout, stderr, err := s.runPodExecCommand(ctx, in.Namespace, in.Name, "", []string{"ovs-vsctl", "list-ports", in.Bridge})
+	stdout, stderr, err := s.runPodExecCommand(ctx, namespace, name, "", []string{"ovs-vsctl", "list-ports", bridge})
 	if err != nil {
-		return nil, result, fmt.Errorf("failed to retrieve ports for bridge %s from pod %s/%s: %w",
-			in.Bridge, in.Namespace, in.Name, err)
+		return []string{}, fmt.Errorf("failed to retrieve ports for bridge %s from pod %s/%s: %w",
+			bridge, namespace, name, err)
 	}
 	if stderr != "" {
-		return nil, result, fmt.Errorf("failed to retrieve ports for bridge %s from pod %s/%s: %s",
-			in.Bridge, in.Namespace, in.Name, stderr)
+		return []string{}, fmt.Errorf("failed to retrieve ports for bridge %s from pod %s/%s: %s",
+			bridge, namespace, name, stderr)
 	}
-	ports := utils.StripEmptyLines(strings.Split(stdout, "\n"))
-	result.Ports = append(result.Ports, ports...)
-	return nil, result, nil
+	return utils.StripEmptyLines(strings.Split(stdout, "\n")), nil
 }
 
-func (s *MCPServer) ListInterfaces(ctx context.Context, req *mcp.CallToolRequest,
-	in ovstypes.GetOVSCommandParams) (*mcp.CallToolResult, ovstypes.InterfaceResult, error) {
-	result := ovstypes.InterfaceResult{
-		Interfaces: []string{}, // Initialize with empty slice to ensure valid JSON even on error
+// listInterfaces lists all interfaces on a specific OVS bridge via 'ovs-vsctl list-ifaces'.
+func (s *MCPServer) listInterfaces(ctx context.Context, namespace, name, bridge string) ([]string, error) {
+	if err := validateBridgeName(bridge); err != nil {
+		return []string{}, err
 	}
-
-	// Validate bridge name
-	if err := validateBridgeName(in.Bridge); err != nil {
-		return nil, result, err
-	}
-
-	// Run ovs-vsctl list-ifaces command
-	stdout, stderr, err := s.runPodExecCommand(ctx, in.Namespace, in.Name, "", []string{"ovs-vsctl", "list-ifaces", in.Bridge})
+	stdout, stderr, err := s.runPodExecCommand(ctx, namespace, name, "", []string{"ovs-vsctl", "list-ifaces", bridge})
 	if err != nil {
-		return nil, result, fmt.Errorf("failed to retrieve interfaces for bridge %s from pod %s/%s: %w",
-			in.Bridge, in.Namespace, in.Name, err)
+		return []string{}, fmt.Errorf("failed to retrieve interfaces for bridge %s from pod %s/%s: %w",
+			bridge, namespace, name, err)
 	}
 	if stderr != "" {
-		return nil, result, fmt.Errorf("failed to retrieve interfaces for bridge %s from pod %s/%s: %s",
-			in.Bridge, in.Namespace, in.Name, stderr)
+		return []string{}, fmt.Errorf("failed to retrieve interfaces for bridge %s from pod %s/%s: %s",
+			bridge, namespace, name, stderr)
 	}
-	ports := utils.StripEmptyLines(strings.Split(stdout, "\n"))
-	result.Interfaces = append(result.Interfaces, ports...)
-	return nil, result, nil
+	return utils.StripEmptyLines(strings.Split(stdout, "\n")), nil
 }
 
-// DumpFlows dumps flows from a specific OVS bridge.
-func (s *MCPServer) DumpFlows(ctx context.Context, req *mcp.CallToolRequest,
-	in ovstypes.GetOVSCommandParams) (*mcp.CallToolResult, ovstypes.FlowsResult, error) {
-	result := ovstypes.FlowsResult{
-		Bridge: in.Bridge,
-		Flows:  []string{}, // Initialize with empty slice to ensure valid JSON even on error
+// dumpFlows dumps OpenFlow flows from a specific OVS bridge via 'ovs-ofctl dump-flows'.
+func (s *MCPServer) dumpFlows(ctx context.Context, namespace, name, bridge string,
+	patternParams pattern.PatternParams, headTailParams headtail.HeadTailParams) ([]string, error) {
+	if err := validateBridgeName(bridge); err != nil {
+		return []string{}, err
 	}
-
-	// Validate bridge name
-	if err := validateBridgeName(in.Bridge); err != nil {
-		return nil, result, err
-	}
-
-	// Filter flows by pattern if provided
-	flows, err := in.PatternParams.ExecuteWithMatch(func() ([]string, error) {
-		// Run ovs-ofctl dump-flows command
-		stdout, stderr, err := s.runPodExecCommand(ctx, in.Namespace, in.Name, "", []string{"ovs-ofctl", "dump-flows", in.Bridge})
+	flows, err := patternParams.ExecuteWithMatch(func() ([]string, error) {
+		stdout, stderr, err := s.runPodExecCommand(ctx, namespace, name, "", []string{"ovs-ofctl", "dump-flows", bridge})
 		if err != nil {
 			return nil, fmt.Errorf("failed to dump flows for bridge %s on pod %s/%s: %w",
-				in.Bridge, in.Namespace, in.Name, err)
+				bridge, namespace, name, err)
 		}
 		if stderr != "" {
 			return nil, fmt.Errorf("failed to dump flows for bridge %s on pod %s/%s: %s",
-				in.Bridge, in.Namespace, in.Name, stderr)
+				bridge, namespace, name, stderr)
 		}
-		flows := utils.StripEmptyLines(strings.Split(stdout, "\n"))
-		return flows, nil
+		return utils.StripEmptyLines(strings.Split(stdout, "\n")), nil
 	}, true)
 	if err != nil {
-		return nil, result, err
+		return []string{}, err
 	}
-
-	// Apply the head and tail parameters to the flows
-	flows = in.HeadTailParams.Apply(flows, DefaultMaxLines)
-
-	result.Flows = flows
-	return nil, result, nil
+	return headTailParams.Apply(flows, DefaultMaxLines), nil
 }
 
-// DumpConntrack dumps connection tracking entries from OVS datapath.
-func (s *MCPServer) DumpConntrack(ctx context.Context, req *mcp.CallToolRequest,
-	in ovstypes.DumpConntrackParams) (*mcp.CallToolResult, ovstypes.ConntrackResult, error) {
-	result := ovstypes.ConntrackResult{
-		Entries: []string{}, // Initialize with empty slice to ensure valid JSON even on error
-	}
-
-	// Validate additional parameters if provided
-	if len(in.AdditionalParams) > 0 {
-		if err := validateConntrackParams(in.AdditionalParams); err != nil {
-			return nil, result, err
+// dumpConntrack dumps connection tracking entries from OVS datapath via 'ovs-appctl dpctl/dump-conntrack'.
+func (s *MCPServer) dumpConntrack(ctx context.Context, namespace, name string, additionalParams []string,
+	patternParams pattern.PatternParams, headTailParams headtail.HeadTailParams) ([]string, error) {
+	if len(additionalParams) > 0 {
+		if err := validateConntrackParams(additionalParams); err != nil {
+			return []string{}, err
 		}
 	}
-
-	// Build command with additional parameters
 	cmd := []string{"ovs-appctl", "dpctl/dump-conntrack"}
-	if len(in.AdditionalParams) > 0 {
-		cmd = append(cmd, in.AdditionalParams...)
+	if len(additionalParams) > 0 {
+		cmd = append(cmd, additionalParams...)
 	}
-
-	// Filter entries by pattern if provided
-	entries, err := in.PatternParams.ExecuteWithMatch(func() ([]string, error) {
-		// Run ovs-appctl dpctl/dump-conntrack command
-		stdout, stderr, err := s.runPodExecCommand(ctx, in.Namespace, in.Name, "", cmd)
+	entries, err := patternParams.ExecuteWithMatch(func() ([]string, error) {
+		stdout, stderr, err := s.runPodExecCommand(ctx, namespace, name, "", cmd)
 		if err != nil {
 			return nil, fmt.Errorf("failed to dump conntrack on pod %s/%s: %w",
-				in.Namespace, in.Name, err)
+				namespace, name, err)
 		}
 		if stderr != "" {
 			return nil, fmt.Errorf("failed to dump conntrack on pod %s/%s: %s",
-				in.Namespace, in.Name, stderr)
+				namespace, name, stderr)
 		}
-		entries := utils.StripEmptyLines(strings.Split(stdout, "\n"))
-		return entries, nil
+		return utils.StripEmptyLines(strings.Split(stdout, "\n")), nil
 	}, true)
 	if err != nil {
-		return nil, result, err
+		return []string{}, err
 	}
-
-	// Apply the head and tail parameters to the entries
-	entries = in.HeadTailParams.Apply(entries, DefaultMaxLines)
-
-	result.Entries = entries
-	return nil, result, nil
+	return headTailParams.Apply(entries, DefaultMaxLines), nil
 }
 
-// DumpOfprotoTrace traces a packet through the OpenFlow pipeline.
-func (s *MCPServer) DumpOfprotoTrace(ctx context.Context, req *mcp.CallToolRequest,
-	in ovstypes.OfprotoTraceParams) (*mcp.CallToolResult, ovstypes.OfprotoTraceResult, error) {
-	result := ovstypes.OfprotoTraceResult{
-		Bridge: in.Bridge,
-		Flow:   in.Flow,
+// dumpOfprotoTrace traces a packet through the OpenFlow pipeline via 'ovs-appctl ofproto/trace'.
+func (s *MCPServer) dumpOfprotoTrace(ctx context.Context, namespace, name, bridge, flow string,
+	patternParams pattern.PatternParams, headTailParams headtail.HeadTailParams) (string, error) {
+	if err := validateBridgeName(bridge); err != nil {
+		return "", err
 	}
-
-	// Validate bridge name
-	if err := validateBridgeName(in.Bridge); err != nil {
-		return nil, result, err
+	if err := validateFlowSpec(flow); err != nil {
+		return "", err
 	}
-
-	// Validate flow specification
-	if err := validateFlowSpec(in.Flow); err != nil {
-		return nil, result, err
-	}
-
-	// Build command: ovs-appctl ofproto/trace <bridge> <flow>
-	cmd := []string{"ovs-appctl", "ofproto/trace", in.Bridge, in.Flow}
-
-	// Filter lines by pattern if provided
-	lines, err := in.PatternParams.ExecuteWithMatch(func() ([]string, error) {
-		// Run ovs-appctl ofproto/trace command
-		stdout, stderr, err := s.runPodExecCommand(ctx, in.Namespace, in.Name, "", cmd)
+	cmd := []string{"ovs-appctl", "ofproto/trace", bridge, flow}
+	lines, err := patternParams.ExecuteWithMatch(func() ([]string, error) {
+		stdout, stderr, err := s.runPodExecCommand(ctx, namespace, name, "", cmd)
 		if err != nil {
 			return nil, fmt.Errorf("failed to trace flow on bridge %s, pod %s/%s: %w",
-				in.Bridge, in.Namespace, in.Name, err)
+				bridge, namespace, name, err)
 		}
 		if stderr != "" {
 			return nil, fmt.Errorf("failed to trace flow on bridge %s, pod %s/%s: %s",
-				in.Bridge, in.Namespace, in.Name, stderr)
+				bridge, namespace, name, stderr)
 		}
-		lines := utils.StripEmptyLines(strings.Split(stdout, "\n"))
-		return lines, nil
+		return utils.StripEmptyLines(strings.Split(stdout, "\n")), nil
 	}, true)
 	if err != nil {
-		return nil, result, err
+		return "", err
 	}
-
-	// Apply the head and tail parameters to the lines
-	lines = in.HeadTailParams.Apply(lines, DefaultMaxLines)
-
-	// Join all lines into a single output string
-	result.Output = strings.Join(lines, "\n")
-	return nil, result, nil
+	lines = headTailParams.Apply(lines, DefaultMaxLines)
+	return strings.Join(lines, "\n"), nil
 }

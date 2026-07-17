@@ -51,7 +51,7 @@ func TestToolFilter(t *testing.T) {
 				{Name: "tcpdump"},
 				{Name: "ovn-show"},
 				{Name: "pwru"},
-				{Name: "ovs-list-br"},
+				{Name: "ovs-vsctl"},
 			},
 		}
 		// Snapshot the original Tools slice header before invoking the
@@ -61,7 +61,7 @@ func TestToolFilter(t *testing.T) {
 		// reference). Comparing this snapshot after the call catches that
 		// regression.
 		originalTools := listResult.Tools
-		originalNames := []string{"tcpdump", "ovn-show", "pwru", "ovs-list-br"}
+		originalNames := []string{"tcpdump", "ovn-show", "pwru", "ovs-vsctl"}
 
 		m := ToolFilter(map[string]bool{"tcpdump": true, "pwru": true})
 		h := m(func(_ context.Context, _ string, _ mcp.Request) (mcp.Result, error) {

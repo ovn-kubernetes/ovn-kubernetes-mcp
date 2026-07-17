@@ -19,7 +19,7 @@ import (
 var toolsByCategory = map[string][]string{
 	"kubernetes":    {"pod-logs", "resource-get", "resource-list"},
 	"ovn":           {"ovn-show", "ovn-get", "ovn-lflow-list", "ovn-trace"},
-	"ovs":           {"ovs-list-br", "ovs-list-ports", "ovs-list-ifaces", "ovs-vsctl-show", "ovs-ofctl-dump-flows", "ovs-appctl-dump-conntrack", "ovs-appctl-ofproto-trace"},
+	"ovs":           {"ovs-vsctl", "ovs-ofctl", "ovs-appctl"},
 	"kernel":        {"get-conntrack", "get-iptables", "get-nft", "get-ip"},
 	"network-tools": {"tcpdump", "pwru"},
 	"sosreport":     {"sos-list-plugins", "sos-list-commands", "sos-search-commands", "sos-get-command", "sos-search-pod-logs"},

@@ -310,13 +310,9 @@ Available when running with `--mode live-cluster` or `--mode dual` (and with a v
 | | `ovn-get` | Query records from an OVN database table with flexible filtering. |
 | | `ovn-lflow-list` | List logical flows from the OVN Southbound database. |
 | | `ovn-trace` | Trace a packet through the OVN logical network. |
-| **ovs** | `ovs-list-br` | List all OVS bridges on a specific pod. |
-| | `ovs-list-ports` | List all ports on a specific OVS bridge. |
-| | `ovs-list-ifaces` | List all interfaces on a specific OVS bridge. |
-| | `ovs-vsctl-show` | Display a comprehensive overview of OVS configuration. |
-| | `ovs-ofctl-dump-flows` | Dump OpenFlow flows from a specific OVS bridge. |
-| | `ovs-appctl-dump-conntrack` | Dump connection tracking entries from OVS datapath. |
-| | `ovs-appctl-ofproto-trace` | Trace a packet through the OpenFlow pipeline. |
+| **ovs** | `ovs-vsctl` | ovs-vsctl allows to run an ovs-vsctl command against an ovnkube-node pod to inspect the OVS switch configuration. |
+| | `ovs-ofctl` | ovs-ofctl allows to run an ovs-ofctl command against an ovnkube-node pod to inspect the OpenFlow state of an OVS bridge. |
+| | `ovs-appctl` | ovs-appctl allows to run an ovs-appctl command against an ovnkube-node pod to interact with the OVS daemons for datapath and OpenFlow debugging. |
 | **kernel** | `get-conntrack` | get-conntrack allows to interact with the connection tracking system of a Kubernetes node. |
 | | `get-iptables` | get-iptables allows to interact with kernel to list packet filter rules. |
 | | `get-nft` | get-nft allows to interact with kernel to list packet filtering and classification rules. |

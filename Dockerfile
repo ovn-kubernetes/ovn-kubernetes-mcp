@@ -1,6 +1,6 @@
 # Build stage – use Go image to match go.mod (set via build-arg from Makefile)
 ARG GOLANG_IMAGE=quay.io/projectquay/golang
-ARG GOLANG_VERSION=1.24
+ARG GOLANG_VERSION=1.26
 FROM ${GOLANG_IMAGE}:${GOLANG_VERSION} AS builder
 WORKDIR /build
 

@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"flag"
+	"fmt"
 	"log"
 	"maps"
 	"net"
@@ -24,6 +25,7 @@ import (
 	ovnmcp "github.com/ovn-kubernetes/ovn-kubernetes-mcp/pkg/ovn/mcp"
 	ovsmcp "github.com/ovn-kubernetes/ovn-kubernetes-mcp/pkg/ovs/mcp"
 	sosreportmcp "github.com/ovn-kubernetes/ovn-kubernetes-mcp/pkg/sosreport/mcp"
+	"github.com/ovn-kubernetes/ovn-kubernetes-mcp/pkg/version"
 )
 
 const defaultNetshootImage = "nicolaka/netshoot:v0.15"
@@ -185,8 +187,10 @@ func parseFlags() *MCPServerConfig {
 		timeoutSeconds     int
 		disabledCategories string
 		disabledTools      string
+		showVersion        bool
 	)
 
+	flag.BoolVar(&showVersion, "version", false, "Print the version and exit")
 	flag.StringVar(&cfg.Mode, "mode", "live-cluster", "Mode of debugging: live-cluster or offline or dual")
 	flag.StringVar(&cfg.Transport, "transport", "stdio", "Transport to use: stdio or http")
 	flag.StringVar(&cfg.Host, "host", "localhost", "Host to bind to (use 0.0.0.0 for container/cluster)")
@@ -201,6 +205,11 @@ func parseFlags() *MCPServerConfig {
 	flag.StringVar(&disabledTools, "disable-tools", "",
 		"Comma-separated tool names to hide from clients (e.g. tcpdump,pwru)")
 	flag.Parse()
+
+	if showVersion {
+		fmt.Println(version.Print())
+		os.Exit(0)
+	}
 
 	// Convert timeout to duration and apply limits
 	if timeoutSeconds < 0 {

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"regexp"
 
+	ovstypes "github.com/ovn-kubernetes/ovn-kubernetes-mcp/pkg/ovs/types"
 	"github.com/ovn-kubernetes/ovn-kubernetes-mcp/pkg/utils"
 )
 
@@ -55,4 +56,34 @@ func validateConntrackParams(params []string) error {
 	}
 
 	return nil
+}
+
+// validateVsctlAction validates that the action is a supported ovs-vsctl subcommand.
+func validateVsctlAction(action string) error {
+	switch ovstypes.VsctlAction(action) {
+	case ovstypes.VsctlShow, ovstypes.VsctlListBr, ovstypes.VsctlListPorts, ovstypes.VsctlListIfaces:
+		return nil
+	default:
+		return fmt.Errorf(`invalid action %q: must be one of "show", "list-br", "list-ports", "list-ifaces"`, action)
+	}
+}
+
+// validateOfctlAction validates that the action is a supported ovs-ofctl subcommand.
+func validateOfctlAction(action string) error {
+	switch ovstypes.OfctlAction(action) {
+	case ovstypes.OfctlDumpFlows:
+		return nil
+	default:
+		return fmt.Errorf(`invalid action %q: must be one of "dump-flows"`, action)
+	}
+}
+
+// validateAppctlAction validates that the action is a supported ovs-appctl subcommand.
+func validateAppctlAction(action string) error {
+	switch ovstypes.AppctlAction(action) {
+	case ovstypes.AppctlDumpConntrack, ovstypes.AppctlOfprotoTrace:
+		return nil
+	default:
+		return fmt.Errorf(`invalid action %q: must be one of "dpctl/dump-conntrack", "ofproto/trace"`, action)
+	}
 }

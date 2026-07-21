@@ -2,6 +2,8 @@ package mcp
 
 import (
 	"testing"
+
+	ovstypes "github.com/ovn-kubernetes/ovn-kubernetes-mcp/pkg/ovs/types"
 )
 
 func TestValidateBridgeName(t *testing.T) {
@@ -338,6 +340,260 @@ func TestValidateConntrackParams(t *testing.T) {
 			err := validateConntrackParams(tt.params)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("validateConntrackParams() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func TestValidateVsctlAction(t *testing.T) {
+	tests := []struct {
+		name    string
+		action  string
+		wantErr bool
+	}{
+		{
+			name:    "valid show",
+			action:  string(ovstypes.VsctlShow),
+			wantErr: false,
+		},
+		{
+			name:    "valid list-br",
+			action:  string(ovstypes.VsctlListBr),
+			wantErr: false,
+		},
+		{
+			name:    "valid list-ports",
+			action:  string(ovstypes.VsctlListPorts),
+			wantErr: false,
+		},
+		{
+			name:    "valid list-ifaces",
+			action:  string(ovstypes.VsctlListIfaces),
+			wantErr: false,
+		},
+		{
+			name:    "empty action returns error",
+			action:  "",
+			wantErr: true,
+		},
+		{
+			name:    "unknown action returns error",
+			action:  "bogus",
+			wantErr: true,
+		},
+		{
+			name:    "typo of show returns error",
+			action:  "shoow",
+			wantErr: true,
+		},
+		{
+			name:    "uppercase show returns error",
+			action:  "SHOW",
+			wantErr: true,
+		},
+		{
+			name:    "titlecase show returns error",
+			action:  "Show",
+			wantErr: true,
+		},
+		{
+			name:    "trailing space returns error",
+			action:  "show ",
+			wantErr: true,
+		},
+		{
+			name:    "leading space returns error",
+			action:  " show",
+			wantErr: true,
+		},
+		{
+			name:    "ofctl action leaks in returns error",
+			action:  "dump-flows",
+			wantErr: true,
+		},
+		{
+			name:    "appctl action leaks in returns error",
+			action:  "dpctl/dump-conntrack",
+			wantErr: true,
+		},
+		{
+			name:    "appctl trace leaks in returns error",
+			action:  "ofproto/trace",
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := validateVsctlAction(tt.action)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("validateVsctlAction() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func TestValidateOfctlAction(t *testing.T) {
+	tests := []struct {
+		name    string
+		action  string
+		wantErr bool
+	}{
+		{
+			name:    "valid dump-flows",
+			action:  string(ovstypes.OfctlDumpFlows),
+			wantErr: false,
+		},
+		{
+			name:    "empty action returns error",
+			action:  "",
+			wantErr: true,
+		},
+		{
+			name:    "unknown action returns error",
+			action:  "dump-groups",
+			wantErr: true,
+		},
+		{
+			name:    "typo returns error",
+			action:  "dumpflows",
+			wantErr: true,
+		},
+		{
+			name:    "uppercase returns error",
+			action:  "DUMP-FLOWS",
+			wantErr: true,
+		},
+		{
+			name:    "titlecase returns error",
+			action:  "Dump-Flows",
+			wantErr: true,
+		},
+		{
+			name:    "trailing space returns error",
+			action:  "dump-flows ",
+			wantErr: true,
+		},
+		{
+			name:    "leading space returns error",
+			action:  " dump-flows",
+			wantErr: true,
+		},
+		{
+			name:    "vsctl action leaks in returns error",
+			action:  "show",
+			wantErr: true,
+		},
+		{
+			name:    "vsctl list-br leaks in returns error",
+			action:  "list-br",
+			wantErr: true,
+		},
+		{
+			name:    "appctl action leaks in returns error",
+			action:  "ofproto/trace",
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := validateOfctlAction(tt.action)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("validateOfctlAction() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func TestValidateAppctlAction(t *testing.T) {
+	tests := []struct {
+		name    string
+		action  string
+		wantErr bool
+	}{
+		{
+			name:    "valid dpctl/dump-conntrack",
+			action:  string(ovstypes.AppctlDumpConntrack),
+			wantErr: false,
+		},
+		{
+			name:    "valid ofproto/trace",
+			action:  string(ovstypes.AppctlOfprotoTrace),
+			wantErr: false,
+		},
+		{
+			name:    "empty action returns error",
+			action:  "",
+			wantErr: true,
+		},
+		{
+			name:    "unknown action returns error",
+			action:  "foo/bar",
+			wantErr: true,
+		},
+		{
+			name:    "missing slash in ofproto trace returns error",
+			action:  "ofprototrace",
+			wantErr: true,
+		},
+		{
+			name:    "missing slash in dpctl dump conntrack returns error",
+			action:  "dpctldumpconntrack",
+			wantErr: true,
+		},
+		{
+			name:    "backslash instead of slash returns error",
+			action:  `ofproto\trace`,
+			wantErr: true,
+		},
+		{
+			name:    "uppercase returns error",
+			action:  "OFPROTO/TRACE",
+			wantErr: true,
+		},
+		{
+			name:    "titlecase returns error",
+			action:  "Ofproto/Trace",
+			wantErr: true,
+		},
+		{
+			name:    "trailing space returns error",
+			action:  "ofproto/trace ",
+			wantErr: true,
+		},
+		{
+			name:    "leading space returns error",
+			action:  " ofproto/trace",
+			wantErr: true,
+		},
+		{
+			name:    "vsctl action leaks in returns error",
+			action:  "show",
+			wantErr: true,
+		},
+		{
+			name:    "ofctl action leaks in returns error",
+			action:  "dump-flows",
+			wantErr: true,
+		},
+		{
+			name:    "partial match dpctl returns error",
+			action:  "dpctl",
+			wantErr: true,
+		},
+		{
+			name:    "partial match trace returns error",
+			action:  "trace",
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := validateAppctlAction(tt.action)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("validateAppctlAction() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
 	}

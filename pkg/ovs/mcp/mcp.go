@@ -152,6 +152,10 @@ Example output (action='ofproto/trace'):
 func (s *MCPServer) Vsctl(ctx context.Context, req *mcp.CallToolRequest,
 	in ovstypes.VsctlParams) (*mcp.CallToolResult, ovstypes.VsctlResult, error) {
 
+	if err := validateVsctlAction(in.Action); err != nil {
+		return nil, ovstypes.VsctlResult{}, err
+	}
+
 	switch ovstypes.VsctlAction(in.Action) {
 	case ovstypes.VsctlShow:
 		output, err := s.show(ctx, in.Namespace, in.Name, in.HeadTailParams)
@@ -179,6 +183,10 @@ func (s *MCPServer) Vsctl(ctx context.Context, req *mcp.CallToolRequest,
 func (s *MCPServer) Ofctl(ctx context.Context, req *mcp.CallToolRequest,
 	in ovstypes.OfctlParams) (*mcp.CallToolResult, ovstypes.OfctlResult, error) {
 
+	if err := validateOfctlAction(in.Action); err != nil {
+		return nil, ovstypes.OfctlResult{}, err
+	}
+
 	switch ovstypes.OfctlAction(in.Action) {
 	case ovstypes.OfctlDumpFlows:
 		flows, err := s.dumpFlows(ctx, in.Namespace, in.Name, in.Bridge, in.PatternParams, in.HeadTailParams)
@@ -193,6 +201,10 @@ func (s *MCPServer) Ofctl(ctx context.Context, req *mcp.CallToolRequest,
 // required "action" parameter.
 func (s *MCPServer) Appctl(ctx context.Context, req *mcp.CallToolRequest,
 	in ovstypes.AppctlParams) (*mcp.CallToolResult, ovstypes.AppctlResult, error) {
+
+	if err := validateAppctlAction(in.Action); err != nil {
+		return nil, ovstypes.AppctlResult{}, err
+	}
 
 	switch ovstypes.AppctlAction(in.Action) {
 	case ovstypes.AppctlDumpConntrack:

@@ -134,6 +134,13 @@ else
 
     make build-image IMAGE="$IMAGE" CONTAINER_RUNTIME="$CONTAINER_RUNTIME"
     install_image "$IMAGE" "$KIND_CLUSTER_NAME"
+
+    # Pre-load the debug pod image used by kernel and network-tools tests
+    # so Kind nodes don't need to pull it at test time.
+    NETSHOOT_IMAGE="nicolaka/netshoot:v0.15"
+    "${CONTAINER_RUNTIME}" pull "${NETSHOOT_IMAGE}" 2>/dev/null || true
+    install_image "${NETSHOOT_IMAGE}" "$KIND_CLUSTER_NAME" || true
+
     DEPLOY_OVNK_MCP_K8S_INVOKED=1
     make deploy-ovnk-mcp-k8s IMAGE="$IMAGE"
 

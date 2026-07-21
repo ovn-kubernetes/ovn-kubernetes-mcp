@@ -45,7 +45,7 @@ func (s *MCPServer) AddTools(server *mcp.Server) {
 Parameters:
 - node (required): Name of the node from where conntrack entries are expected to be extracted
 - namespace (optional): Namespace of the debug pod from where conntrack entries are expected to be extracted. Default: 'default'
-- command (optional): These options specify the particular operation to perform. These options can only be used if configured image has 'conntrack' utility available.
+- command (optional): These options specify the particular operation to perform. These options can only be used if configured image has 'conntrack' utility available. If omitted or empty, defaults to -L. 
 					  -L, --dump : List connection tracking table.
 					  -C, --count: Show the table counter.
 					  -S, --stats: Show the in-kernel connection tracking system statistics.
@@ -85,7 +85,7 @@ Parameters:
 					mangle	: This table is used for specialized packet alteration.
 					raw   	: This table is used mainly for configuring exemptions from connection tracking in combination with the NOTRACK target.
 					security: This table is used for Mandatory Access Control (MAC) networking rules.
-- command (required): These options specify the desired action to perform. Only one of them can be specified on the command line unless otherwise stated below.
+- command (optional): These options specify the desired action to perform. Only one of them can be specified on the command line unless otherwise stated below. If omitted or empty, defaults to -L.
 					  -L, --list [chain]       : List all rules in the selected chain. If no chain is selected, all chains are listed.
 					  -S, --list-rules [chain] : Print all rules in the selected chain. If no chain is selected, all chains are printed like iptables-save.
 - filter_parameters (optional): These parameters are useful to filter certain entries from the whole table:
@@ -103,7 +103,8 @@ apply tail before head. Default: false
 - timeout_seconds (optional): Timeout in seconds for the command execution. If not specified, server default timeout is used. The maximum value is %d seconds.
 							
 Example:
-- node='ovn-control-plane', table='nat', command='-L', filter_parameters='-nv4'	
+- node='ovn-control-plane', table='nat', filter_parameters='-nv4'
+- node='ovn-control-plane', table='nat', command='-L'
 Example output:
 Chain POSTROUTING (policy ACCEPT 675K packets, 41M bytes)
  pkts bytes target     prot opt in     out     source               destination         
@@ -125,7 +126,7 @@ Parameters:
 					- list sets      : Display the elements in the specified set.
 					- list maps      : Display the elements in the specified map.
 					- list flowtables: List all flowtables.
-- address_families (optional): Address families determine the type of packets which are processed. For each address family, the kernel contains so called hooks at specific stages of
+- address_families (optional): Address families determine the type of packets which are processed. For each address family, the kernel contains so-called hooks at specific stages of
        						   the packet processing paths, which invoke nftables if rules for these hooks exist.
 							   - ip       IPv4 address family.
                                - ip6      IPv6 address family.
@@ -153,7 +154,7 @@ table inet ovn-kubernetes
 Parameters:
 - node (required): Name of the node on which ip command is expected to be executed
 - namespace (optional): Namespace of the debug pod on which ip command is expected to be executed. Default: 'default'
-- options (optional): These options helps in providing more details or formattig output data.
+- options (optional): These options helps in providing more details or formatting output data.
                       -d, -details        : Output more detailed information.
 					  -4                  : shortcut for -family inet.
 					  -6                  : shortcut for -family inet6.

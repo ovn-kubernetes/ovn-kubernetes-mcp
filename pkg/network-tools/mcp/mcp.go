@@ -52,8 +52,6 @@ func (s *MCPServer) AddTools(server *mcp.Server) {
 Supports both node-level and pod-level packet capture with BPF filtering.
 
 This tool creates a specialized debug pod on the specified node for node-level captures.
-The node image can be configured via --tcpdump-image flag or will default to nicolaka/netshoot:v0.13.
-The image must contain the tcpdump utility
 
 Parameters:
 - target_type: 'node' or 'pod' (required)
@@ -82,8 +80,6 @@ drops, routing issues, and understanding the kernel's packet processing path.
 
 This tool creates a specialized debug pod on the specified node with necessary eBPF capabilities
 to trace packets through kernel networking functions.
-The node image can be configured via --pwru-image flag or will default to docker.io/cilium/pwru:v1.0.10.
-The image must contain the pwru utility
 
 Parameters:
 - node_name: Name of the node to run pwru on (required)

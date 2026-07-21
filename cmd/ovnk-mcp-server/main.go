@@ -193,7 +193,6 @@ func parseFlags() *MCPServerConfig {
 	flag.StringVar(&cfg.Port, "port", "8080", "Port to use")
 	flag.StringVar(&cfg.Kubernetes.Kubeconfig, "kubeconfig", "", "Path to the kubeconfig file")
 	flag.StringVar(&cfg.NetworkTools.PwruImage, "pwru-image", "docker.io/cilium/pwru:v1.0.10", "Container image for pwru operations")
-
 	flag.StringVar(&cfg.NetworkTools.TcpdumpImage, "tcpdump-image", defaultNetshootImage, "Container image for tcpdump operations")
 	flag.StringVar(&cfg.Kernel.Image, "kernel-image", defaultNetshootImage, "Container image for kernel operations")
 	flag.IntVar(&timeoutSeconds, "tool-timeout", 120, "Timeout in seconds for tool operations (0 to disable)")

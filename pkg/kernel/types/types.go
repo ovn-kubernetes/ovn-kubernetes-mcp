@@ -27,7 +27,7 @@ type ListConntrackParams struct {
 type ListIPTablesParams struct {
 	CommonParams
 	Table            string `json:"table,omitempty"`             // Table specifies the iptables table to query (e.g., "filter", "nat", "mangle", "raw")
-	Command          string `json:"command"`                     // Command specifies the iptables command to execute (e.g., "iptables", "ip6tables")
+	Command          string `json:"command,omitempty"`           // Command specifies the iptables action (e.g., "-L", "-S"). If omitted or empty, defaults to "-L"
 	FilterParameters string `json:"filter_parameters,omitempty"` // FilterParameters specifies additional filter criteria for iptables rules
 }
 

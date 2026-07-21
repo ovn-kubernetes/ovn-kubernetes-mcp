@@ -121,7 +121,7 @@ Parameters:
 apply tail before head. Default: false
 
 Reads container logs collected from the sosreport for the specified pod. Returns
-log lines with the log file path.
+log lines.
 
 Examples:
 - namespace='openshift-ovn-kubernetes', name='ovnkube-node-abc'

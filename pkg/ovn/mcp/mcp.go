@@ -42,7 +42,7 @@ For Southbound (sbdb): Runs 'ovn-sbctl show' and displays chassis information, p
 and their relationships.
 
 Parameters:
-- namespace: Kubernetes namespace of the OVN pod (e.g., "openshift-ovn-kubernetes")
+- namespace: Kubernetes namespace of the OVN pod (e.g., "ovn-kubernetes")
 - name: Name of the pod running OVN (e.g., "ovnkube-node-xxxxx")
 - database: OVN database to query - "nbdb" for Northbound or "sbdb" for Southbound
 - head (optional): Return only first N lines. Default: %d lines if tail is not specified

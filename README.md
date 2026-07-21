@@ -16,6 +16,7 @@ Repo hosting the Model Context Protocol Server for troubleshooting OVN-Kubernete
 - [Tools available in MCP Server](#tools-available-in-mcp-server)
   - [Live Cluster Mode](#live-cluster-mode-1)
   - [Offline Mode](#offline-mode-1)
+- [User Guide](docs/user-guide.md) — full parameter reference and examples for every tool
 
 ---
 
@@ -293,6 +294,8 @@ args:
 ```
 
 ---
+
+Full parameter reference: [User Guide](docs/user-guide.md).
 
 <!-- TOOLS_SECTION_START -->
 ## Tools available in MCP Server

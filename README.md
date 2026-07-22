@@ -309,6 +309,7 @@ Available when running with `--mode live-cluster` or `--mode dual` (and with a v
 | **kubernetes** | `pod-logs` | Get container logs from a pod in the Kubernetes cluster. |
 | | `resource-get` | Get a specific Kubernetes resource by name. |
 | | `resource-list` | List Kubernetes resources of a specific kind. |
+| | `resource-describe` | Describe a specific Kubernetes resource by name, similar to 'kubectl describe'. |
 | **ovn** | `ovn-show` | Display a comprehensive overview of OVN configuration from either the Northbound or Southbound database. |
 | | `ovn-get` | Query records from an OVN database table with flexible filtering. |
 | | `ovn-lflow-list` | List logical flows from the OVN Southbound database. |

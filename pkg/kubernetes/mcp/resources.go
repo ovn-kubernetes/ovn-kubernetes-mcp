@@ -127,3 +127,32 @@ func (s *MCPServer) ListResources(ctx context.Context, req *mcp.CallToolRequest,
 
 	return nil, types.ListResourcesResult{Resources: resourcesData}, nil
 }
+
+// DescribeResource describes a resource by group, version, kind, name and namespace,
+// including its spec, status and related events, similar to `kubectl describe`.
+func (s *MCPServer) DescribeResource(ctx context.Context, req *mcp.CallToolRequest, in types.DescribeResourceParams) (*mcp.CallToolResult, types.DescribeResourceResult, error) {
+	// If the version, kind or name is not set, return an error.
+	var err error
+	if in.Version == "" {
+		err = errors.New("version is required")
+	}
+	if in.Kind == "" {
+		err = errors.Join(err, errors.New("kind is required"))
+	}
+	if in.Name == "" {
+		err = errors.Join(err, errors.New("name is required"))
+	}
+	if err != nil {
+		return nil, types.DescribeResourceResult{}, err
+	}
+
+	// Describe the resource by group, version, kind, name and namespace.
+	resource, events, err := s.clientSet.DescribeResource(ctx, in.Group, in.Version, in.Kind, in.Name, in.Namespace)
+	if err != nil {
+		return nil, types.DescribeResourceResult{}, err
+	}
+
+	result := types.DescribeResourceResult{}
+	result.Describe(resource, events)
+	return nil, result, nil
+}

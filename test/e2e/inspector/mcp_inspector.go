@@ -89,7 +89,7 @@ func (i *MCPInspector) getCmdArgs() (string, []string, error) {
 	cmd := "npx"
 	args := []string{
 		"-y",
-		"@modelcontextprotocol/inspector",
+		"@modelcontextprotocol/inspector@v1-latest",
 		"--cli",
 	}
 	if i.serverURL != "" {

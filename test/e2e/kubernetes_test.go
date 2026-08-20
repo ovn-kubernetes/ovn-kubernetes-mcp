@@ -19,8 +19,9 @@ import (
 
 var _ = Describe("Kubernetes Tools", func() {
 	const (
-		resourceGetToolName  = "resource-get"
-		resourceListToolName = "resource-list"
+		resourceGetToolName      = "resource-get"
+		resourceListToolName     = "resource-list"
+		resourceDescribeToolName = "resource-describe"
 	)
 
 	fr := k8se2eframework.NewDefaultFramework("kubernetes-tools")
@@ -167,6 +168,53 @@ var _ = Describe("Kubernetes Tools", func() {
 				cmpopts.IgnoreFields(types.Resource{}, "FormattedOutput.Data"),
 			}
 			Expect(cmp.Equal(listResult, expectedListResult, cmpOptions)).To(BeTrue())
+		})
+	})
+
+	Context("Describe Resource", func() {
+		It("should describe a secret from a namespace", func() {
+			By("Creating a secret")
+			secretName := "test-describe-secret"
+			err := kubeClient.Create(context.Background(), &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      secretName,
+					Namespace: fr.Namespace.Name,
+					Labels:    map[string]string{"app": "test-describe"},
+				},
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			By("Describing the secret")
+			output, err := mcpInspector.
+				MethodCall(resourceDescribeToolName, map[string]any{
+					"group":     "",
+					"version":   "v1",
+					"kind":      "Secret",
+					"namespace": fr.Namespace.Name,
+					"name":      secretName,
+				}).Execute()
+			Expect(err).NotTo(HaveOccurred())
+			Expect(output).NotTo(BeEmpty())
+
+			By("Checking the description contains identifying metadata and an events section")
+			describeResult := utils.UnmarshalCallToolResult[types.DescribeResourceResult](output)
+			Expect(describeResult.Description).To(ContainSubstring("Name:\t" + secretName))
+			Expect(describeResult.Description).To(ContainSubstring("Namespace:\t" + fr.Namespace.Name))
+			Expect(describeResult.Description).To(ContainSubstring("Kind:\tSecret"))
+			Expect(describeResult.Description).To(ContainSubstring("app=test-describe"))
+			Expect(describeResult.Description).To(ContainSubstring("Events:"))
+		})
+
+		It("should return an error when the resource does not exist", func() {
+			By("Describing a resource that does not exist")
+			_, err := mcpInspector.
+				MethodCall(resourceDescribeToolName, map[string]any{
+					"version":   "v1",
+					"kind":      "Secret",
+					"namespace": fr.Namespace.Name,
+					"name":      "does-not-exist",
+				}).Execute()
+			Expect(err).To(HaveOccurred())
 		})
 	})
 })

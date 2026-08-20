@@ -136,4 +136,34 @@ Examples:
 - List with detailed info: {"version": "v1", "kind": "Pod", "namespace": "kube-system", "output_type": "wide"}
 - List pod names as JSONPath: {"version": "v1", "kind": "Pod", "namespace": "default", "output_type": "jsonpath='{.items[*].metadata.name}'"}`,
 		}, s.ListResources)
+
+	mcp.AddTool(server,
+		&mcp.Tool{
+			Name: "resource-describe",
+			Description: `Describe a specific Kubernetes resource by name, similar to 'kubectl describe'.
+
+Retrieves a resource's spec, status, and its related Events. Events explain WHY a
+resource is in its current state (e.g. scheduling failures, image pull errors,
+network policy denials, probe failures) which plain "get" output does not show.
+Use this instead of resource-get when troubleshooting why a resource is failing
+or misbehaving.
+
+Parameters:
+- group (optional): API group of the resource (e.g., "apps", "networking.k8s.io"). Empty for core resources
+- version (required): API version of the resource (e.g., "v1", "v1beta1")
+- kind (required): Kind of the resource (e.g., "Pod", "Service", "Deployment", "Node")
+- name (required): Name of the resource to describe
+- namespace (optional): Namespace of the resource. If omitted, defaults to "default" for namespaced resources and empty for cluster-scoped resources
+
+Returns a text description containing the resource's name, namespace, labels,
+annotations, spec, status and a table of related Events (type, reason, age,
+source, message) sorted from oldest to newest.
+
+Examples:
+- Describe a pod (defaults to "default" namespace): {"version": "v1", "kind": "Pod", "name": "my-pod"}
+- Describe a pod to debug a crash or scheduling issue: {"version": "v1", "kind": "Pod", "name": "my-pod", "namespace": "default"}
+- Describe a deployment: {"group": "apps", "version": "v1", "kind": "Deployment", "name": "my-deployment", "namespace": "default"}
+- Describe a node (cluster-scoped): {"version": "v1", "kind": "Node", "name": "worker-0"}
+- Describe a service to check endpoint issues: {"version": "v1", "kind": "Service", "name": "my-service", "namespace": "default"}`,
+		}, s.DescribeResource)
 }

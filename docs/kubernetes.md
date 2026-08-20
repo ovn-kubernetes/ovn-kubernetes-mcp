@@ -9,6 +9,7 @@ See also: [User guide](user-guide.md) (including [common parameters](user-guide.
 | [`pod-logs`](#pod-logs) | Get container logs from a pod in the Kubernetes cluster |
 | [`resource-get`](#resource-get) | Get a specific Kubernetes resource by name |
 | [`resource-list`](#resource-list) | List Kubernetes resources of a specific kind |
+| [`resource-describe`](#resource-describe) | Describe a specific Kubernetes resource by name, similar to `kubectl describe` |
 
 ---
 
@@ -193,4 +194,50 @@ Lists resources in a namespace or across all namespaces. Supports filtering by l
   "namespace": "default",
   "output_type": "jsonpath='{.items[*].metadata.name}'"
 }
+```
+
+---
+
+## resource-describe
+
+Retrieves a resource's spec, status, and its related Events, similar to `kubectl describe`. Events explain WHY a resource is in its current state (e.g. scheduling failures, image pull errors, network policy denials, probe failures), which plain `resource-get` output does not show. Use this instead of `resource-get` when troubleshooting why a resource is failing or misbehaving.
+
+### Parameters
+
+| Parameter | Type | Required | Default | Description |
+|-----------|------|----------|---------|-------------|
+| `group` | string | no | empty (core resources) | API group of the resource (e.g., `"apps"`, `"networking.k8s.io"`). Empty for core resources |
+| `version` | string | **yes** | — | API version of the resource (e.g., `"v1"`, `"v1beta1"`) |
+| `kind` | string | **yes** | — | Kind of the resource (e.g., `"Pod"`, `"Service"`, `"Deployment"`, `"Node"`) |
+| `name` | string | **yes** | — | Name of the resource to describe |
+| `namespace` | string | no | `"default"` for namespaced resources; empty for cluster-scoped | Namespace of the resource. If omitted, defaults to `"default"` for namespaced resources and empty for cluster-scoped resources |
+
+Returns a text description containing the resource's name, namespace, labels, annotations, spec, status and a table of related Events (type, reason, age, source, message) sorted from oldest to newest.
+
+### Examples
+
+```json
+{"version": "v1", "kind": "Pod", "name": "my-pod"}
+```
+
+```json
+{"version": "v1", "kind": "Pod", "name": "my-pod", "namespace": "default"}
+```
+
+```json
+{
+  "group": "apps",
+  "version": "v1",
+  "kind": "Deployment",
+  "name": "my-deployment",
+  "namespace": "default"
+}
+```
+
+```json
+{"version": "v1", "kind": "Node", "name": "worker-0"}
+```
+
+```json
+{"version": "v1", "kind": "Service", "name": "my-service", "namespace": "default"}
 ```

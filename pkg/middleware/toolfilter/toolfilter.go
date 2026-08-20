@@ -17,7 +17,7 @@ import (
 // pkg/*/mcp/mcp.go; the README "Tools available in MCP Server" table is the
 // canonical reference.
 var toolsByCategory = map[string][]string{
-	"kubernetes":    {"pod-logs", "resource-get", "resource-list"},
+	"kubernetes":    {"pod-logs", "resource-get", "resource-list", "resource-describe"},
 	"ovn":           {"ovn-show", "ovn-get", "ovn-lflow-list", "ovn-trace"},
 	"ovs":           {"ovs-vsctl", "ovs-ofctl", "ovs-appctl"},
 	"kernel":        {"get-conntrack", "get-iptables", "get-nft", "get-ip"},

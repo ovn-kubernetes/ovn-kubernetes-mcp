@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: Copyright The OVN-Kubernetes-MCP Contributors
+# SPDX-License-Identifier: Apache-2.0
+
 # Build stage – use Go image to match go.mod (set via build-arg from Makefile)
 ARG GOLANG_IMAGE=quay.io/projectquay/golang
 ARG GOLANG_VERSION=1.26

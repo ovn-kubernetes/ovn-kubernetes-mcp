@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: Copyright The OVN-Kubernetes-MCP Contributors
+// SPDX-License-Identifier: Apache-2.0
+
 package types
 
 import "github.com/ovn-kubernetes/ovn-kubernetes-mcp/pkg/utils/timeout"

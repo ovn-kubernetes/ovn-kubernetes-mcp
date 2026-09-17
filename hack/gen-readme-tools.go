@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: Copyright The OVN-Kubernetes-MCP Contributors
+// SPDX-License-Identifier: Apache-2.0
+
 //go:build ignore
 
 // gen-readme-tools parses MCP tool definitions from pkg/*/mcp/mcp.go and

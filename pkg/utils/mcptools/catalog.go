@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: Copyright The OVN-Kubernetes-MCP Contributors
+// SPDX-License-Identifier: Apache-2.0
+
 // Package mcptools holds helpers that parse the MCP tool registrations under
 // pkg/*/mcp/mcp.go. The same primitives are consumed by two places that must
 // agree about which tools exist:

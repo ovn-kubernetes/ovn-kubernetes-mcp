@@ -1,5 +1,8 @@
 #!/usr/bin/env bash
 
+# SPDX-FileCopyrightText: Copyright The OVN-Kubernetes-MCP Contributors
+# SPDX-License-Identifier: Apache-2.0
+
 set -exo pipefail
 
 NVM_VERSION=$1

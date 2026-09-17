@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: Copyright The OVN-Kubernetes-MCP Contributors
+# SPDX-License-Identifier: Apache-2.0
+
 # Get the Git repository root directory
 export GIT_ROOT := $(shell git rev-parse --show-toplevel)
 

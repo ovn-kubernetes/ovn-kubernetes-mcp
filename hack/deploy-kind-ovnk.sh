@@ -1,5 +1,8 @@
 #!/usr/bin/env bash
 
+# SPDX-FileCopyrightText: Copyright The OVN-Kubernetes-MCP Contributors
+# SPDX-License-Identifier: Apache-2.0
+
 set -eo pipefail
 
 # Returns the full directory name of the script

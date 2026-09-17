@@ -1,4 +1,7 @@
 #!/usr/bin/env bash
+# SPDX-FileCopyrightText: Copyright The OVN-Kubernetes-MCP Contributors
+# SPDX-License-Identifier: Apache-2.0
+
 VERSION=v2.12.1
 extra_flags=""
 if [ "$#" -ne 1 ]; then

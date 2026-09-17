@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: Copyright The OVN-Kubernetes-MCP Contributors
+// SPDX-License-Identifier: Apache-2.0
+
 package types
 
 // GetResourceParams is a type that contains the group, version, kind, name and namespace of a resource.

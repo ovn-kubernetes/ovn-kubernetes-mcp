@@ -7,7 +7,7 @@ require (
 	github.com/k8snetworkplumbingwg/ipamclaims v0.5.1-alpha
 	github.com/k8snetworkplumbingwg/multi-networkpolicy v1.0.1
 	github.com/k8snetworkplumbingwg/network-attachment-definition-client v1.7.7
-	github.com/metallb/frr-k8s v0.0.25
+	github.com/metallb/frr-k8s v0.0.26
 	github.com/modelcontextprotocol/go-sdk v1.6.1
 	github.com/onsi/ginkgo/v2 v2.32.0
 	github.com/onsi/gomega v1.42.1

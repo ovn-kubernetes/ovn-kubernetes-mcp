@@ -32,7 +32,7 @@ export IMAGE
 GOLANG_IMAGE ?= quay.io/projectquay/golang
 GOLANG_VERSION ?= 1.26
 KUSTOMIZE_VERSION ?= v5.8.1
-K8S_VERSION ?= v1.36.2
+K8S_VERSION ?= v1.37.1
 
 .PHONY: build-image
 build-image:
@@ -148,10 +148,10 @@ deploy-kind-ovnk:
 undeploy-kind-ovnk:
 	@$(GIT_ROOT)/hack/undeploy-kind-ovnk.sh
 
-NVM_VERSION := 0.40.6
-NODE_VERSION := 26.5.0
-NPM_VERSION := 12.0.1
-GINKGO_VERSION := v2.32.0
+NVM_VERSION := 0.40.8
+NODE_VERSION := 26.10.0
+NPM_VERSION := 12.2.0
+GINKGO_VERSION := v2.33.0
 MCP_MODE ?= live-cluster
 
 .PHONY: run-e2e

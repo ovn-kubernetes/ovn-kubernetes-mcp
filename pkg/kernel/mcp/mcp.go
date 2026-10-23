@@ -52,12 +52,23 @@ Parameters:
 					  -L, --dump : List connection tracking table.
 					  -C, --count: Show the table counter.
 					  -S, --stats: Show the in-kernel connection tracking system statistics.
-- filter_parameters (optional): These parameters are useful to filter certain entries from the whole table:
+- filter_parameters (optional): Only the following read-only dump filters and output options are accepted:
                         -s, --src, --orig-src IP_ADDRESS : Match only entries whose source address in the original direction equals to mentioned IP.
 						-d, --dst, --orig-dst IP_ADDRESS : Match only entries whose destination address in the original direction equals to mentioned IP.
 						-p, --proto PROTO                : Specify layer four (TCP, UDP, ...) protocol.
 						--sport, --orig-port-src PORT    : Source port in original direction.
 						--dport, --orig-port-dst PORT    : Destination port in original direction.
+Additional filters (each requires a value):
+  -r/--reply-src, -q/--reply-dst, --mask-src, --mask-dst, --protonum, -f/--family,
+  --reply-port-src, --reply-port-dst, --state, -m/--mark, -c/--secmark, -u/--status,
+  -l/--label, -w/--zone, --orig-zone, --reply-zone, -o/--output,
+  --icmp-type, --icmp-code, --icmp-id, --icmpv6-type, --icmpv6-code, --icmpv6-id,
+  --srckey/--orig-key-src, --dstkey/--orig-key-dst, --reply-key-src, --reply-key-dst.
+NAT filters -n/--src-nat, -g/--dst-nat, and -j/--any-nat accept an optional separate ADDRESS[:PORT] value.
+Values may be separate (-p tcp), attached to short options (-ptcp), or use --name=value.
+An optional full table name (conntrack, expect, dying, unconfirmed) may precede the options.
+Counter clearing, alternate operations, and unlisted options or abbreviations are rejected.
+Filters apply only to dump/list. Count, stats, and the /proc file fallback do not apply them.
 - head (optional): Return only first N lines. Default: %d lines if tail is not specified
 - tail (optional): Return only last N lines
 - apply_tail_first (optional): If both head and tail are set and apply_tail_first is true,
@@ -91,14 +102,17 @@ Parameters:
 - command (optional): These options specify the desired action to perform. Only one of them can be specified on the command line unless otherwise stated below. If omitted or empty, defaults to -L.
 					  -L, --list [chain]       : List all rules in the selected chain. If no chain is selected, all chains are listed.
 					  -S, --list-rules [chain] : Print all rules in the selected chain. If no chain is selected, all chains are printed like iptables-save.
-- filter_parameters (optional): These parameters are useful to filter certain entries from the whole table:
-                                -s, --source address[/mask]      : Source specification. Address can be either a network name, a hostname, a network IP address (with /mask), or a  plain  IP  address.
-								-d, --destination address[/mask] : Destination  specification.
+- filter_parameters (optional): An optional chain name and rule number may precede the following listing options:
 								-v, --verbose					 : Verbose output.
 								-n, --numeric                    : Numeric  output.   IP  addresses  and port numbers will be printed in numeric format.
-								-p, --protocol protocol          : The protocol of the rule or of the packet to check.
+								-x, --exact                      : Exact packet and byte counters.
+								-w, --wait [seconds]             : Wait for the xtables lock, optionally for a non-negative number of seconds.
+								--line-numbers                   : Include rule numbers.
 								-4, --ipv4                       : IPv4
 								-6, --ipv6                       : IPv6
+Short flags may be combined (e.g., -nv4). Wait values may be separate (-w 5), attached (-w5), or use --wait=5.
+Other options and abbreviated long option names are rejected. Source, destination, and protocol selectors are not valid with iptables listing commands.
+Filter options apply to -L/--list. For -S/--list-rules, only the IPv4/IPv6 selection is used.
 - head (optional): Return only first N lines. Default: %d lines if tail is not specified
 - tail (optional): Return only last N lines
 - apply_tail_first (optional): If both head and tail are set and apply_tail_first is true,
@@ -157,13 +171,14 @@ table inet ovn-kubernetes
 Parameters:
 - node (required): Name of the node on which ip command is expected to be executed
 - namespace (optional): Namespace of the debug pod on which ip command is expected to be executed. Default: 'default'
-- options (optional): These options helps in providing more details or formatting output data.
-                      -d, -details        : Output more detailed information.
-					  -4                  : shortcut for -family inet.
-					  -6                  : shortcut for -family inet6.
-					  -r, -resolve        : use the system's name resolver to print DNS names instead of host addresses.
-					  -n, -netns <NETNS>  : switches ip to the specified network namespace NETNS.
-					  -a, -all            : executes specified command over all objects, it depends if command supports this option.
+- options (optional): Diagnostic global options, using the following exact names with one or two leading hyphens:
+                      -d, -details; -s, -stats, -statistics; -o, -oneline; -r, -resolve; -a, -all; -N, -Numeric.
+                      -j, -json; -p, -pretty; -br, -brief; -h, -human, -human-readable; -iec.
+                      -t, -timestamp; -ts, -tshort; -c, -color[=always|auto|never].
+                      -4, -6, -0, -B, -M; -f, -family <inet|inet6|link|bridge|mpls>.
+                      -n, -netns <NETNS>; -rc, -rcvbuf <SIZE> (unsigned 32-bit integer).
+Namespace, family, and buffer options require a separate value. Short flags must be separate (e.g., -s -d, not -sd).
+Batch mode, other options, and unlisted abbreviations are rejected.
 - command (required): These options specify the desired action to perform. Only one of them can be specified on the command line unless otherwise stated below.
                       - address show     : protocol (IP or IPv6) address on a device.
 					  - link show        : network device.

@@ -5,6 +5,7 @@ package mcp
 
 import (
 	"fmt"
+	"strings"
 
 	ovntypes "github.com/ovn-kubernetes/ovn-kubernetes-mcp/pkg/ovn/types"
 	"github.com/ovn-kubernetes/ovn-kubernetes-mcp/pkg/utils"
@@ -30,12 +31,18 @@ func validateRecordName(record string) error {
 
 // validateDatapath validates that a datapath name is safe and non-empty.
 func validateDatapath(datapath string) error {
+	if strings.HasPrefix(strings.TrimSpace(datapath), "-") {
+		return fmt.Errorf("invalid datapath name: must not start with '-'")
+	}
 	return utils.ValidateSafeString(datapath, "datapath name", false, utils.ShellMetaCharactersTypeDefault)
 }
 
 // validateMicroflow validates that a microflow specification is safe and non-empty.
 // Microflow specs can contain && for logical AND, so we allow & but block other dangerous chars.
 func validateMicroflow(microflow string) error {
+	if strings.HasPrefix(strings.TrimSpace(microflow), "-") {
+		return fmt.Errorf("invalid microflow specification: must not start with '-'")
+	}
 	return utils.ValidateSafeString(microflow, "microflow specification", false, utils.ShellMetaCharactersTypeAllowBracketsAllowAmp)
 }
 

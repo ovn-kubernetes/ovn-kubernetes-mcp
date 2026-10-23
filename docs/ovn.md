@@ -119,6 +119,8 @@ Runs `ovn-sbctl lflow-list` to retrieve logical flows which represent the compil
 | `name` | string | **yes** | — | Name of the pod running OVN |
 | `datapath` | string | no | — | Datapath name or UUID to filter flows for a specific logical switch/router |
 
+The datapath must not start with `-`, including after leading whitespace.
+
 Also accepts common [`pattern`](user-guide.md#pattern-filtering) and [`head` / `tail` / `apply_tail_first`](user-guide.md#head--tail-line-limiting).
 
 ### Examples
@@ -155,6 +157,8 @@ Runs `ovn-trace` to simulate packet processing through the logical network pipel
 | `datapath` | string | **yes** | — | Name of the logical switch or router to start the trace |
 | `microflow` | string | **yes** | — | Microflow specification describing the packet (e.g., `"inport==\"pod1\" && eth.src==00:00:00:00:00:01 && ip4.src==10.244.0.5 && ip4.dst==10.244.1.5"`) |
 | `mode` | string | no | `"detailed"` | Output verbosity mode - `"detailed"` (default), `"summary"`, or `"minimal"` |
+
+Neither `datapath` nor `microflow` may start with `-`, including after leading whitespace.
 
 Also accepts common [`pattern`](user-guide.md#pattern-filtering) and [`head` / `tail` / `apply_tail_first`](user-guide.md#head--tail-line-limiting).
 

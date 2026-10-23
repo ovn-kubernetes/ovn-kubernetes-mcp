@@ -26,11 +26,6 @@ func (s *MCPServer) GetIptables(ctx context.Context, req *mcp.CallToolRequest, i
 		defer cancel()
 	}
 
-	err := s.utilityExists(ctx, in.Namespace, in.Node, "iptables")
-	if err != nil {
-		return nil, types.Result{}, fmt.Errorf("error while getting list of iptables rules: failed to verify iptables utility availability in configured image: %w", err)
-	}
-
 	if err := validateTableName(in.Table); err != nil {
 		return nil, types.Result{}, fmt.Errorf("error while getting list of iptables rules: %w", err)
 	}
@@ -38,13 +33,17 @@ func (s *MCPServer) GetIptables(ctx context.Context, req *mcp.CallToolRequest, i
 		return nil, types.Result{}, fmt.Errorf("error while getting list of iptables rules: %w", err)
 	}
 
-	if err := utils.ValidateSafeString(in.FilterParameters, "filter parameters", true, utils.ShellMetaCharactersTypeDefault); err != nil {
+	binary, filterArgs, err := parseIptablesFilters(in.FilterParameters)
+	if err != nil {
 		return nil, types.Result{}, fmt.Errorf("error while getting list of iptables rules: %w", err)
+	}
+	if err := s.utilityExists(ctx, in.Namespace, in.Node, binary); err != nil {
+		return nil, types.Result{}, fmt.Errorf("error while getting list of iptables rules: failed to verify iptables utility availability in configured image: %w", err)
 	}
 
 	table := strings.TrimSpace(in.Table)
 	command := strings.TrimSpace(in.Command)
-	cmd := commandbuilder.NewCommand(iptablesCommand(in.FilterParameters))
+	cmd := commandbuilder.NewCommand(binary)
 	// Defaults to 'filter' table when not specified
 	cmd.AddIf(table == "", "-t", "filter")
 	cmd.AddIfNotEmpty(table, "-t", table)
@@ -52,7 +51,7 @@ func (s *MCPServer) GetIptables(ctx context.Context, req *mcp.CallToolRequest, i
 	cmd.AddIf(command == "", "-L")
 	cmd.AddIfNotEmpty(command, command)
 	// FilterParameters are invalid with -S/--list-rules command
-	cmd.AddIf(in.FilterParameters != "" && command != "-S" && command != "--list-rules", strings.Fields(in.FilterParameters)...)
+	cmd.AddIf(command != "-S" && command != "--list-rules", filterArgs...)
 
 	stdout, stderr, err := s.executeCommand(ctx, in.Namespace, in.Node, cmd.Build())
 	if err != nil {
@@ -72,15 +71,76 @@ func (s *MCPServer) GetIptables(ctx context.Context, req *mcp.CallToolRequest, i
 	return nil, types.Result{Data: stdout}, nil
 }
 
-// iptablesCommand determines whether to use iptables or ip6tables.
-func iptablesCommand(filterParameters string) string {
-	for _, item := range strings.Split(filterParameters, " ") {
-		// Use of ip6tables CLI is required while either --ipv6 or -6 flag is mentioned
-		if item == "--ipv6" || (strings.Contains(item, "-") && strings.Contains(item, "6")) {
-			return "ip6tables"
+var iptablesLongFilters = map[string]byte{
+	"--verbose": 'v', "--numeric": 'n', "--exact": 'x', "--line-numbers": 'n',
+	"--wait": 'w', "--ipv4": '4', "--ipv6": '6',
+}
+
+// parseIptablesFilters accepts [chain [rulenum]] followed by listing options.
+// It returns the original tokens and selects IPv6 only from an explicit flag.
+func parseIptablesFilters(filters string) (string, []string, error) {
+	if err := utils.ValidateSafeString(filters, "filter parameters", true, utils.ShellMetaCharactersTypeDefault); err != nil {
+		return "", nil, err
+	}
+	args := strings.Fields(filters)
+	binary := "iptables"
+	firstOption := 0
+	if len(args) > 0 && !strings.HasPrefix(args[0], "-") {
+		if strings.HasPrefix(args[0], "!") || strings.ContainsRune(args[0], 0) {
+			return "", nil, fmt.Errorf("invalid iptables chain: %q", args[0])
+		}
+		firstOption = 1
+		if len(args) > 1 && !strings.HasPrefix(args[1], "-") {
+			rule, err := strconv.ParseUint(args[1], 0, 31)
+			if err != nil || rule == 0 {
+				return "", nil, fmt.Errorf("invalid iptables rule number: %q", args[1])
+			}
+			firstOption = 2
 		}
 	}
-	return "iptables"
+	for i := firstOption; i < len(args); i++ {
+		arg := args[i]
+		if !strings.HasPrefix(arg, "-") {
+			return "", nil, fmt.Errorf("unexpected iptables filter argument: %q", arg)
+		}
+		options := arg[1:]
+		if strings.HasPrefix(arg, "--") {
+			name, value, hasValue := strings.Cut(arg, "=")
+			flag, ok := iptablesLongFilters[name]
+			if !ok || (hasValue && (value == "" || flag != 'w')) {
+				return "", nil, fmt.Errorf("invalid iptables filter option: %q", arg)
+			}
+			options = string(flag) + value
+		}
+		if options == "" {
+			return "", nil, fmt.Errorf("invalid iptables filter option: %q", arg)
+		}
+		for len(options) > 0 {
+			flag := options[0]
+			options = options[1:]
+			switch flag {
+			case 'v', 'n', 'x', '4':
+			case '6':
+				binary = "ip6tables"
+			case 'w':
+				value := options
+				if value == "" && i+1 < len(args) && !strings.HasPrefix(args[i+1], "-") {
+					i++
+					value = args[i]
+				}
+				if value == "" {
+					break // Waiting without a numeric limit is supported by iptables.
+				}
+				if _, err := strconv.ParseUint(value, 0, 31); err != nil {
+					return "", nil, fmt.Errorf("invalid value for iptables filter option %q: %q", arg, value)
+				}
+				options = "" // A value consumes the remainder of a short-option bundle.
+			default:
+				return "", nil, fmt.Errorf("invalid iptables filter option: %q", arg)
+			}
+		}
+	}
+	return binary, args, nil
 }
 
 // validateTableName validates iptables table name

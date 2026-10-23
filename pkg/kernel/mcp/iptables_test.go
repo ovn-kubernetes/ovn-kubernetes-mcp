@@ -4,7 +4,13 @@
 package mcp
 
 import (
+	"context"
+	"slices"
+	"strings"
 	"testing"
+	"time"
+
+	"github.com/ovn-kubernetes/ovn-kubernetes-mcp/pkg/kernel/types"
 )
 
 func TestValidateTableName(t *testing.T) {
@@ -153,115 +159,98 @@ func TestValidateIptablesCommand(t *testing.T) {
 	}
 }
 
-func TestIptablesCommand(t *testing.T) {
-	tests := []struct {
-		name             string
-		filterParameters string
-		want             string
-	}{
-		{
-			name:             "empty filter parameters",
-			filterParameters: "",
-			want:             "iptables",
-		},
-		{
-			name:             "ipv6 flag --ipv6",
-			filterParameters: "--ipv6",
-			want:             "ip6tables",
-		},
-		{
-			name:             "ipv6 short flag -6",
-			filterParameters: "-6",
-			want:             "ip6tables",
-		},
-		{
-			name:             "ipv6 flag with other parameters",
-			filterParameters: "-p tcp --ipv6 --dport 80",
-			want:             "ip6tables",
-		},
-		{
-			name:             "ipv6 short flag with other parameters",
-			filterParameters: "-p tcp -6 --dport 80",
-			want:             "ip6tables",
-		},
-		{
-			name:             "ipv4 parameters only",
-			filterParameters: "-p tcp --dport 80",
-			want:             "iptables",
-		},
-		{
-			name:             "parameters with number 6 but not ipv6 flag",
-			filterParameters: "--dport 6000",
-			want:             "iptables",
-		},
-		{
-			name:             "flag containing both - and 6",
-			filterParameters: "-p6",
-			want:             "ip6tables",
-		},
-		{
-			name:             "flag containing both - and 6 in middle",
-			filterParameters: "-m6state",
-			want:             "ip6tables",
-		},
-		{
-			name:             "multiple flags with ipv6 at end",
-			filterParameters: "-p tcp -m state --state NEW --ipv6",
-			want:             "ip6tables",
-		},
-		{
-			name:             "multiple flags with -6 at beginning",
-			filterParameters: "-6 -p tcp -m state --state NEW",
-			want:             "ip6tables",
-		},
-		{
-			name:             "protocol number without dash",
-			filterParameters: "-p tcp --sport 6379",
-			want:             "iptables",
-		},
-		{
-			name:             "dash without 6",
-			filterParameters: "-p tcp -m state",
-			want:             "iptables",
-		},
-		{
-			name:             "number 6 without dash",
-			filterParameters: "6",
-			want:             "iptables",
-		},
-		{
-			name:             "chain name with 6",
-			filterParameters: "-A INPUT6",
-			want:             "iptables",
-		},
-		{
-			name:             "ipv6 address in parameter",
-			filterParameters: "-d 2001:db8::1",
-			want:             "iptables",
-		},
-		{
-			name:             "combined short flags with 6",
-			filterParameters: "-t6n",
-			want:             "ip6tables",
-		},
-		{
-			name:             "whitespace variations with ipv6",
-			filterParameters: "  --ipv6  -p tcp  ",
-			want:             "ip6tables",
-		},
-		{
-			name:             "whitespace variations without ipv6",
-			filterParameters: "  -p tcp  --dport 443  ",
-			want:             "iptables",
-		},
+func TestGetIptablesRejectsUnsafeFilters(t *testing.T) {
+	filters := []string{
+		"-Z", "--zero", "-nvZ", "-A INPUT", "-F", "-t security", "--table=security",
+		"--modprobe=/host/usr/bin/dnf", "--modprobe /host/usr/bin/dnf", "-M/host/usr/bin/dnf",
+		"--modp=/host/usr/bin/dnf", "--numeric=true", "--line-numbers=true", "--", "-",
+		"-s", "-s -n", "--source=", "-p --modprobe=/host/usr/bin/dnf", "-p--modprobe=/host/usr/bin/dnf",
+		"--source=-Z", "--protocol=-Z", "-w-1", "-wINPUT", "-w6Z", "--wait=-1", "--wait=abc", "--wait=", "-w 4294967296",
+		"-p /host/protocol", "-s /host/address", "INPUT OUTPUT", "-m state", "--dport 80",
+		"-n; true", "INPUT\x00", "--unknown", "-n6Z", "-n0",
+		"-p6", "-nvp6", "-s 10.0.0.1", "--src=10.0.0.1", "--dst=192.0.2.1",
+		"INPUT 0", "INPUT -1", "INPUT 2147483648", "INPUT 3 4", "-w INPUT",
 	}
+	for _, command := range []string{"", "-S"} {
+		for _, filter := range filters {
+			t.Run(command+"/"+filter, func(t *testing.T) {
+				s := &MCPServer{runDebugNodeCommand: func(_ context.Context, _, _, _ string, _ []string, _, _ string, _ time.Duration) (string, string, error) {
+					t.Fatal("invalid filters reached debug pod execution")
+					return "", "", nil
+				}}
+				_, _, err := s.GetIptables(t.Context(), nil, types.ListIPTablesParams{
+					Command: command, FilterParameters: filter,
+				})
+				if err == nil {
+					t.Fatal("expected invalid filter parameters to be rejected")
+				}
+			})
+		}
+	}
+}
 
+func TestGetIptablesCommand(t *testing.T) {
+	tests := []struct {
+		name    string
+		command string
+		table   string
+		filters string
+		want    []string
+	}{
+		{"defaults", "", "", "", []string{"iptables", "-t", "filter", "-L"}},
+		{"documented bundle", "", "nat", "-nv4", []string{"iptables", "-t", "nat", "-L", "-nv4"}},
+		{"IPv6 bundle", "--list", "", "-nv6", []string{"ip6tables", "-t", "filter", "--list", "-nv6"}},
+		{"IPv6 long flag", "", "", "--ipv6 --numeric", []string{"ip6tables", "-t", "filter", "-L", "--ipv6", "--numeric"}},
+		{"IPv6 tab separator", "", "", "-n\t-6", []string{"ip6tables", "-t", "filter", "-L", "-n", "-6"}},
+		{"chain with hyphen and six", "", "", "CUSTOM-6", []string{"iptables", "-t", "filter", "-L", "CUSTOM-6"}},
+		{"wait value", "", "", "-w6", []string{"iptables", "-t", "filter", "-L", "-w6"}},
+		{"wait long value", "", "", "--wait=6", []string{"iptables", "-t", "filter", "-L", "--wait=6"}},
+		{"wait separate value", "", "", "INPUT -w 6", []string{"iptables", "-t", "filter", "-L", "INPUT", "-w", "6"}},
+		{"wait without value", "", "", "-w", []string{"iptables", "-t", "filter", "-L", "-w"}},
+		{"listing controls", "", "", "INPUT -vnx --line-numbers", []string{"iptables", "-t", "filter", "-L", "INPUT", "-vnx", "--line-numbers"}},
+		{"long listing controls", "", "", "--verbose --numeric --exact", []string{"iptables", "-t", "filter", "-L", "--verbose", "--numeric", "--exact"}},
+		// iptables(8) and upstream xshared.c allow -L [chain [rulenum]].
+		{"chain and rule", "", "", "INPUT 3 -nv4", []string{"iptables", "-t", "filter", "-L", "INPUT", "3", "-nv4"}},
+		{"IPv6 chain and rule", "", "", "INPUT 3 -nv6", []string{"ip6tables", "-t", "filter", "-L", "INPUT", "3", "-nv6"}},
+		{"chain punctuation", "", "", "tenant@blue+1 -n", []string{"iptables", "-t", "filter", "-L", "tenant@blue+1", "-n"}},
+		{"repeated verbose", "", "", "-vvn4", []string{"iptables", "-t", "filter", "-L", "-vvn4"}},
+		{"native numeric wait", "", "", "-w0x6", []string{"iptables", "-t", "filter", "-L", "-w0x6"}},
+		{"rule listing", "--list-rules", "raw", "", []string{"iptables", "-t", "raw", "--list-rules"}},
+		{"rule listing omits filters", "-S", "", "-6 -n", []string{"ip6tables", "-t", "filter", "-S"}},
+	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := iptablesCommand(tt.filterParameters)
-			if got != tt.want {
-				t.Errorf("iptablesCommand(%q) = %v, want %v", tt.filterParameters, got, tt.want)
+			var commands [][]string
+			s := &MCPServer{runDebugNodeCommand: func(_ context.Context, _, _, _ string, cmd []string, _, _ string, _ time.Duration) (string, string, error) {
+				commands = append(commands, cmd)
+				return "Chain INPUT", "", nil
+			}}
+			_, _, err := s.GetIptables(t.Context(), nil, types.ListIPTablesParams{
+				Command: tt.command, Table: tt.table, FilterParameters: tt.filters,
+			})
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(commands) != 2 {
+				t.Fatalf("commands = %q, want availability probe and listing", commands)
+			}
+			if want := []string{tt.want[0], "-V"}; !slices.Equal(commands[0], want) {
+				t.Errorf("availability probe = %q, want %q", commands[0], want)
+			}
+			if !slices.Equal(commands[1], tt.want) {
+				t.Errorf("command = %q, want %q", commands[1], tt.want)
 			}
 		})
+	}
+}
+
+func TestGetIptablesRejectsMetacharacters(t *testing.T) {
+	s := &MCPServer{runDebugNodeCommand: func(_ context.Context, _, _, _ string, _ []string, _, _ string, _ time.Duration) (string, string, error) {
+		t.Fatal("invalid filters reached debug pod execution")
+		return "", "", nil
+	}}
+	_, _, err := s.GetIptables(t.Context(), nil, types.ListIPTablesParams{FilterParameters: "-n; true"})
+	if err == nil || !strings.Contains(err.Error(), "invalid use of metacharacters in parameter") {
+		t.Errorf("error = %v, want existing metacharacter validation error", err)
 	}
 }

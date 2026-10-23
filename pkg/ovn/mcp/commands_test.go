@@ -79,6 +79,10 @@ func TestValidateDatapath(t *testing.T) {
 		{"UUID", "7a8b9c0d-1234-5678-9abc-def012345678", false},
 		{"empty", "", true},
 		{"injection", "dp;rm -rf", true},
+		{"database option", "--db=tcp:198.51.100.7:6642", true},
+		{"short option", "-h", true},
+		{"option separator", "--", true},
+		{"option after whitespace", " \t--db=tcp:198.51.100.7:6642", true},
 	}
 
 	for _, tt := range tests {
@@ -119,8 +123,13 @@ func TestValidateMicroflow(t *testing.T) {
 			microflow: `inport=="k8s-ovn-worker" && eth.dst==0a:58:0a:f4:01:01 && ip4.src==10.244.1.5 && ip4.dst==192.168.1.1`,
 			wantErr:   false,
 		},
+		{"parenthesized IPv6 flow", `(inport=="web-port") && ip6.src==2001:db8::1`, false},
 		// Invalid
 		{"empty", "", true},
+		{"database option", "--db=tcp:198.51.100.7:6642", true},
+		{"short option", "-h", true},
+		{"option separator", "--", true},
+		{"option after whitespace", " \t--db=tcp:198.51.100.7:6642", true},
 		{"semicolon injection", `inport=="pod1";rm -rf /`, true},
 		{"pipe injection", `inport=="pod1" | cat /etc/passwd`, true},
 		{"backtick injection", "inport==`whoami`", true},

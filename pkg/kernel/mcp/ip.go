@@ -26,23 +26,22 @@ func (s *MCPServer) GetIPCommandOutput(ctx context.Context, req *mcp.CallToolReq
 		defer cancel()
 	}
 
-	err := s.utilityExists(ctx, in.Namespace, in.Node, "ip")
-	if err != nil {
-		return nil, types.Result{}, fmt.Errorf("error while getting ip data: failed to verify ip utility availability in configured image: %w", err)
-	}
-
 	if err := validateIPCommand(in.Command); err != nil {
 		return nil, types.Result{}, fmt.Errorf("error while getting ip data: %w", err)
 	}
 	if err := utils.ValidateSafeString(in.FilterParameters, "filter parameters", true, utils.ShellMetaCharactersTypeDefault); err != nil {
 		return nil, types.Result{}, fmt.Errorf("error while getting ip data: %w", err)
 	}
-	if err := utils.ValidateSafeString(in.Options, "options", true, utils.ShellMetaCharactersTypeDefault); err != nil {
+	options, err := parseIPOptions(in.Options)
+	if err != nil {
 		return nil, types.Result{}, fmt.Errorf("error while getting ip data: %w", err)
+	}
+	if err := s.utilityExists(ctx, in.Namespace, in.Node, "ip"); err != nil {
+		return nil, types.Result{}, fmt.Errorf("error while getting ip data: failed to verify ip utility availability in configured image: %w", err)
 	}
 
 	cmd := commandbuilder.NewCommand("ip")
-	cmd.AddIfNotEmpty(in.Options, strings.Fields(in.Options)...)
+	cmd.Add(options...)
 	cmd.Add(strings.Fields(in.Command)...)
 	cmd.AddIfNotEmpty(in.FilterParameters, strings.Fields(in.FilterParameters)...)
 
@@ -62,6 +61,55 @@ func (s *MCPServer) GetIPCommandOutput(ctx context.Context, req *mcp.CallToolReq
 	// Join the lines back into a single string
 	stdout = strings.Join(lines, "\n")
 	return nil, types.Result{Data: stdout}, nil
+}
+
+// parseIPOptions accepts diagnostic global options without ip's prefix matching.
+// In particular, -b selects batch mode, while -br selects brief output.
+func parseIPOptions(options string) ([]string, error) {
+	if err := utils.ValidateSafeString(options, "options", true, utils.ShellMetaCharactersTypeDefault); err != nil {
+		return nil, err
+	}
+	args := strings.Fields(options)
+	for i := 0; i < len(args); i++ {
+		opt := args[i]
+		if strings.HasPrefix(opt, "--") {
+			opt = opt[1:] // ip accepts either one or two leading hyphens.
+		}
+		if name, value, hasValue := strings.Cut(opt, "="); hasValue {
+			if (name != "-c" && name != "-color") || (value != "" && value != "always" && value != "auto" && value != "never") {
+				return nil, fmt.Errorf("invalid ip option: %q", args[i])
+			}
+			continue
+		}
+		switch opt {
+		case "-4", "-6", "-0", "-B", "-M",
+			"-d", "-details", "-s", "-stats", "-statistics", "-o", "-oneline",
+			"-r", "-resolve", "-a", "-all", "-N", "-Numeric",
+			"-j", "-json", "-p", "-pretty", "-br", "-brief",
+			"-h", "-human", "-human-readable", "-iec",
+			"-t", "-timestamp", "-ts", "-tshort", "-c", "-color":
+		case "-n", "-netns", "-f", "-family", "-rc", "-rcvbuf":
+			if i+1 == len(args) || strings.HasPrefix(args[i+1], "-") || strings.ContainsRune(args[i+1], 0) {
+				return nil, fmt.Errorf("missing or invalid value for ip option: %q", args[i])
+			}
+			i++
+			switch opt {
+			case "-f", "-family":
+				switch args[i] {
+				case "inet", "inet6", "link", "bridge", "mpls":
+				default:
+					return nil, fmt.Errorf("invalid ip address family: %q", args[i])
+				}
+			case "-rc", "-rcvbuf":
+				if _, err := strconv.ParseUint(args[i], 0, 32); err != nil {
+					return nil, fmt.Errorf("invalid ip receive buffer size: %q", args[i])
+				}
+			}
+		default:
+			return nil, fmt.Errorf("invalid ip option: %q", args[i])
+		}
+	}
+	return args, nil
 }
 
 // validateIPCommand validates that the IP command is allowed.

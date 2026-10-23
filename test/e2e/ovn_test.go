@@ -10,6 +10,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
+	"github.com/google/uuid"
 	"github.com/ovn-kubernetes/ovn-kubernetes-mcp/pkg/ovn/types"
 	"github.com/ovn-kubernetes/ovn-kubernetes-mcp/test/e2e/utils"
 )
@@ -105,12 +106,13 @@ var _ = Describe("OVN Tools", Ordered, func() {
 	})
 
 	Context("OVN Lflow List", func() {
-		It("should list logical flows from SBDB", func() {
+		DescribeTable("should list logical flows from SBDB", func(datapath string) {
 			By("Running ovn-lflow-list")
 			output, err := mcpInspector.
 				MethodCall(ovnLflowListToolName, map[string]any{
 					"namespace": namespace,
 					"name":      podName,
+					"datapath":  datapath,
 					"head":      50,
 				}).Execute()
 			Expect(err).NotTo(HaveOccurred())
@@ -118,6 +120,7 @@ var _ = Describe("OVN Tools", Ordered, func() {
 
 			By("Checking the result contains logical flows within the head limit")
 			lflowResult := utils.UnmarshalCallToolResult[types.LogicalFlowListResult](output)
+			Expect(lflowResult.Datapath).To(Equal(datapath))
 			Expect(lflowResult.Flows).NotTo(BeEmpty())
 			Expect(len(lflowResult.Flows)).To(BeNumerically("<=", 50))
 
@@ -131,7 +134,10 @@ var _ = Describe("OVN Tools", Ordered, func() {
 				ContainSubstring("priority="),
 				ContainSubstring("action="),
 			))
-		})
+		},
+			Entry("all datapaths", ""),
+			Entry("named datapath", "join"),
+		)
 	})
 
 	Context("OVN Trace", func() {
@@ -139,12 +145,12 @@ var _ = Describe("OVN Tools", Ordered, func() {
 			By("Running ovn-trace with a simple microflow")
 			output, err := mcpInspector.
 				MethodCall(ovnTraceToolName, map[string]any{
-					"namespace":  namespace,
-					"name":       podName,
-					"datapath":   "join", // Use the join switch which should exist
-					"microflow":  "eth.src==00:00:00:00:00:01 && eth.dst==00:00:00:00:00:02",
-					"mode":       "summary",
-					"head":       30,
+					"namespace": namespace,
+					"name":      podName,
+					"datapath":  "join", // Use the join switch which should exist
+					"microflow": "eth.src==00:00:00:00:00:01 && eth.dst==00:00:00:00:00:02",
+					"mode":      "summary",
+					"head":      30,
 				}).Execute()
 			Expect(err).NotTo(HaveOccurred())
 			Expect(output).NotTo(BeEmpty())
@@ -172,6 +178,34 @@ var _ = Describe("OVN Tools", Ordered, func() {
 	}
 
 	Context("validation errors", func() {
+		DescribeTable("should reject option-like OVN operands",
+			func(toolName string, toolArgs map[string]any, wantError string) {
+				args := withPod(toolArgs)
+				// A missed validation must not execute injected options on an OVN pod.
+				args["namespace"] = "e2e-ovn-validation-" + uuid.NewString()
+				utils.ExpectToolError(mcpInspector, toolName, args, wantError)
+			},
+			Entry("ovn-trace datapath option", ovnTraceToolName, map[string]any{
+				"datapath":  "--db=tcp:192.0.2.1:6642",
+				"microflow": "eth.src==00:00:00:00:00:01",
+			}, "invalid datapath name: must not start with '-'"),
+			Entry("ovn-trace microflow option", ovnTraceToolName, map[string]any{
+				"datapath":  "join",
+				"microflow": "--help",
+			}, "invalid microflow specification: must not start with '-'"),
+			Entry("ovn-lflow-list datapath option", ovnLflowListToolName, map[string]any{
+				"datapath": "--db=tcp:192.0.2.1:6642",
+			}, "invalid datapath name: must not start with '-'"),
+			Entry("ovn-trace datapath option after whitespace", ovnTraceToolName, map[string]any{
+				"datapath":  " \t--db=tcp:192.0.2.1:6642",
+				"microflow": "eth.src==00:00:00:00:00:01",
+			}, "invalid datapath name: must not start with '-'"),
+			Entry("ovn-trace microflow option after whitespace", ovnTraceToolName, map[string]any{
+				"datapath":  "join",
+				"microflow": " \t--help",
+			}, "invalid microflow specification: must not start with '-'"),
+		)
+
 		DescribeTable("should reject invalid OVN tool inputs",
 			func(toolName string, toolArgs map[string]any, wantError string) {
 				utils.ExpectToolError(mcpInspector, toolName, withPod(toolArgs), wantError)

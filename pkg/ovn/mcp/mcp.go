@@ -120,6 +120,8 @@ Example getting specific columns:
 Runs 'ovn-sbctl lflow-list' to retrieve logical flows which represent the compiled 
 logical network pipeline. This is essential for debugging packet forwarding.
 
+Datapath must not start with '-', including after leading whitespace.
+
 Parameters:
 - namespace: Kubernetes namespace of the OVN pod
 - name: Name of the pod running OVN
@@ -150,6 +152,8 @@ This shows which logical flows match, what actions are taken, and the final disp
 
 The trace is essential for debugging connectivity issues and understanding how traffic
 flows through the OVN logical network.
+
+Datapath and microflow must not start with '-', including after leading whitespace.
 
 Parameters:
 - namespace: Kubernetes namespace of the OVN pod
@@ -347,7 +351,7 @@ func (s *MCPServer) Trace(ctx context.Context, req *mcp.CallToolRequest,
 		return nil, result, err
 	}
 
-	// Build command: ovn-trace <datapath> '<microflow>'
+	// Build command: ovn-trace [options] -- <datapath> <microflow>
 	cmdArgs := []string{"ovn-trace"}
 
 	// Add output format flag based on mode (default to detailed)
@@ -360,7 +364,7 @@ func (s *MCPServer) Trace(ctx context.Context, req *mcp.CallToolRequest,
 		cmdArgs = append(cmdArgs, "--detailed")
 	}
 
-	cmdArgs = append(cmdArgs, in.Datapath, in.Microflow)
+	cmdArgs = append(cmdArgs, "--", in.Datapath, in.Microflow)
 
 	// Match the pattern to the trace output
 	lines, err := in.PatternParams.ExecuteWithMatch(func() ([]string, error) {

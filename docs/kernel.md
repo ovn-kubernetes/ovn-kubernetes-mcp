@@ -90,7 +90,7 @@ Short flags may be combined (`-nv4`); wait values may be separate (`-w 5`), atta
 
 Other options and abbreviated long option names are rejected; select the table through `table`. Source (`-s`), destination (`-d`), and protocol (`-p`) selectors define or check rules; iptables does not support them with listing commands.
 
-Filter options apply to `-L`/`--list`. For `-S`/`--list-rules`, only the IPv4/IPv6 selection is used.
+Chain selection works with both `-L`/`--list` and `-S`/`--list-rules`. For example, `command: "-S"` with `filter_parameters: "INPUT"` lists only the INPUT chain. With `-S`/`--list-rules`, `-n`/`--numeric`, `-x`/`--exact`, and `--line-numbers` are rejected before creating a debug pod, including when short flags are combined. IPv4/IPv6 selection, verbose output, and wait options remain supported.
 
 Also accepts common [`head` / `tail` / `apply_tail_first`](user-guide.md#head--tail-line-limiting) and [`timeout_seconds`](user-guide.md#per-call-timeout).
 

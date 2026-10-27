@@ -124,6 +124,21 @@ var _ = Describe("Kernel Tools", Ordered, func() {
 	})
 
 	Context("get-iptables", func() {
+		It("should limit rule listing to the requested chain", func() {
+			output, err := mcpInspector.MethodCall(getIPTablesToolName, withNode(map[string]any{
+				"table": "filter", "command": "-S", "filter_parameters": "INPUT", "tail": -1,
+			})).Execute()
+			Expect(err).NotTo(HaveOccurred())
+			result := utils.UnmarshalCallToolResult[types.Result](output)
+			Expect(result.Data).NotTo(BeEmpty())
+			for line := range strings.SplitSeq(result.Data, "\n") {
+				fields := strings.Fields(line)
+				Expect(len(fields)).To(BeNumerically(">=", 2), "unexpected rule listing line: %q", line)
+				Expect(fields[0]).To(BeElementOf("-P", "-A"))
+				Expect(fields[1]).To(Equal("INPUT"))
+			}
+		})
+
 		DescribeTable("should preserve native listing syntax",
 			func(filters string) {
 				output, err := mcpInspector.MethodCall(getIPTablesToolName, withNode(map[string]any{
@@ -170,6 +185,8 @@ var _ = Describe("Kernel Tools", Ordered, func() {
 			Entry("lone hyphen", "-L", "-", "invalid iptables filter option"),
 			Entry("option separator", "-L", "--", "invalid iptables filter option"),
 			Entry("counter clearing with rule listing", "-S", "-Z", "invalid iptables filter option"),
+			Entry("numeric output with rule listing", "-S", "-n", "is not supported with -S"),
+			Entry("line numbers with long rule listing", "--list-rules", "INPUT --line-numbers", "is not supported with --list-rules"),
 		)
 
 		It("should retrieve iptables rules from a node", func() {

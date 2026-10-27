@@ -303,6 +303,12 @@ var _ = Describe("Kernel Tools", Ordered, func() {
 	})
 
 	Context("get-conntrack", func() {
+		It("should reject filters for connection counts", func() {
+			utils.ExpectToolError(mcpInspector, getConntrackToolName, withNode(map[string]any{
+				"command": "-C", "filter_parameters": "-p udp",
+			}), "filter_parameters is only supported with -L/--dump")
+		})
+
 		DescribeTable("should preserve read-only dump filters",
 			func(filters string) {
 				output, err := mcpInspector.MethodCall(getConntrackToolName, withNode(map[string]any{

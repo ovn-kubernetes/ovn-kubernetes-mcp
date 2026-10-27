@@ -19,7 +19,7 @@ The debug pod uses the image from `--kernel-image` (default `nicolaka/netshoot:v
 
 Use this command to discover a list of all (or a filtered selection of) currently tracked connections.
 
-The tool prefers the `conntrack` CLI in the configured `--kernel-image`. If that binary is missing, it falls back to reading `/proc/net/nf_conntrack`, which only supports dump/list (`-L`/`--dump`) and does not apply filters. Count (`-C`/`--count`) and stats (`-S`/`--stats`) require the `conntrack` CLI.
+The tool prefers the `conntrack` CLI in the configured `--kernel-image`. If that binary is missing, it falls back to reading `/proc/net/nf_conntrack`, which only supports dump/list (`-L`/`--dump`). The file fallback ignores filters and returns unfiltered entries. Count (`-C`/`--count`) and stats (`-S`/`--stats`) require the `conntrack` CLI.
 
 ### Parameters
 
@@ -47,7 +47,7 @@ Accepted filters follow the [conntrack manual](https://www.netfilter.org/project
 
 All options require a non-empty value except the NAT filters. Values may be separate (`-p tcp`), attached to short options (`-ptcp`), or use `--name=value`. Supply optional NAT values separately. Conntrack validates protocol-specific values and option combinations. An optional full table name (`conntrack`, `expect`, `dying`, or `unconfirmed`) may precede the options.
 
-Counter clearing (`-z`/`--zero`), alternate operations, and unlisted options or abbreviations are rejected before creating a debug pod. Filters apply only to dump/list; count, stats, and the file fallback do not apply them.
+Counter clearing (`-z`/`--zero`), alternate operations, and unlisted options or abbreviations are rejected before creating a debug pod. Filters apply to dump/list with the `conntrack` CLI. Count and stats reject non-empty `filter_parameters`. The file fallback ignores filters and returns unfiltered entries.
 
 Also accepts common [`head` / `tail` / `apply_tail_first`](user-guide.md#head--tail-line-limiting) and [`timeout_seconds`](user-guide.md#per-call-timeout).
 

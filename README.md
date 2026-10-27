@@ -44,6 +44,7 @@ The server currently supports 2 transport modes: `stdio` and `http`.
 | `--transport` | `stdio`                         | Transport: `stdio` or `http`. |
 | `--host` | `localhost`                     | Address the HTTP server binds to (`http` only). Use `0.0.0.0` in a container so clients can reach the listener. |
 | `--port` | `8080`                          | Port for HTTP transport. |
+| `--stateless` | `false`                         | Skip `Mcp-Session-Id` validation and serve each request on a temporary session (`http` only). Set to `true` behind a proxy or when running more than one replica, since neither guarantees a request returns to the process that issued the session. In this mode `GET` returns `405` (no SSE stream) and server-to-client requests are refused, so clients needing either must keep it disabled. |
 | `--kubeconfig` | (none)                          | Path to kubeconfig file. Omit when using in-cluster **ServiceAccount** credentials (for example the pod deployment); otherwise set for `live-cluster` and `dual`. |
 | `--pwru-image` | `docker.io/cilium/pwru:v1.0.10` | Container image for the **pwru** network tool (kernel packet tracing). |
 | `--tcpdump-image` | `nicolaka/netshoot:v0.15`       | Container image for the **tcpdump** network tool (packet capture). |

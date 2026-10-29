@@ -224,8 +224,10 @@ func TestGetConntrackCommand(t *testing.T) {
 		{"dying table", "", "dying", []string{"conntrack", "-L", "dying"}},
 		{"unconfirmed table", "", "unconfirmed", []string{"conntrack", "-L", "unconfirmed"}},
 		{"explicit default table", "", "conntrack -o save", []string{"conntrack", "-L", "conntrack", "-o", "save"}},
-		{"statistics omit filters", "--stats", "-p tcp", []string{"conntrack", "--stats"}},
-		{"count omits filters", "--count", "-p udp", []string{"conntrack", "--count"}},
+		{"statistics", "--stats", "", []string{"conntrack", "--stats"}},
+		{"short statistics with whitespace filters", "-S", " \t ", []string{"conntrack", "-S"}},
+		{"count", "--count", "", []string{"conntrack", "--count"}},
+		{"short count with whitespace filters", "-C", " \t\n ", []string{"conntrack", "-C"}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -251,9 +253,40 @@ func TestGetConntrackCommand(t *testing.T) {
 	}
 }
 
-func TestGetConntrackFallback(t *testing.T) {
-	for _, command := range []string{"", "-L", "--dump", "-S", "-C"} {
+func TestGetConntrackRejectsUnsupportedFilters(t *testing.T) {
+	for _, command := range []string{"-C", "--count", "-S", "--stats", " \t-C \n"} {
 		t.Run(command, func(t *testing.T) {
+			s := &MCPServer{runDebugNodeCommand: func(_ context.Context, _, _, _ string, _ []string, _, _ string, _ time.Duration) (string, string, error) {
+				t.Fatal("unsupported filtered operation reached node execution")
+				return "", "", nil
+			}}
+			_, _, err := s.GetConntrack(t.Context(), nil, types.ListConntrackParams{Command: command, FilterParameters: "-p udp"})
+			if err == nil || !strings.Contains(err.Error(), "filter_parameters is only supported with -L/--dump") {
+				t.Fatalf("error = %v, want unsupported filter error", err)
+			}
+		})
+	}
+}
+
+func TestGetConntrackFallback(t *testing.T) {
+	tests := []struct {
+		name      string
+		command   string
+		filters   string
+		wantError string
+	}{
+		{"default dump", "", "", ""},
+		{"short dump", "-L", "", ""},
+		{"long dump", "--dump", "", ""},
+		{"whitespace filters", "--dump", " \t\n ", ""},
+		{"filtered default dump", "", "-p udp", ""},
+		{"filtered short dump", "-L", "-p udp", ""},
+		{"filtered long dump", "--dump", "-p udp", ""},
+		{"statistics unavailable", "-S", "", "only -L/--dump is supported"},
+		{"count unavailable", "-C", "", "only -L/--dump is supported"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
 			var commands [][]string
 			s := &MCPServer{runDebugNodeCommand: func(_ context.Context, _, _, _ string, cmd []string, _, _ string, _ time.Duration) (string, string, error) {
 				commands = append(commands, cmd)
@@ -262,10 +295,10 @@ func TestGetConntrackFallback(t *testing.T) {
 				}
 				return "tcp src=192.0.2.1", "", nil
 			}}
-			_, _, err := s.GetConntrack(t.Context(), nil, types.ListConntrackParams{Command: command, FilterParameters: "-p tcp"})
-			if command == "-S" || command == "-C" {
-				if err == nil || !strings.Contains(err.Error(), "only -L/--dump is supported") || len(commands) != 1 {
-					t.Fatalf("error = %v, commands = %q; want unsupported operation before file read", err, commands)
+			_, result, err := s.GetConntrack(t.Context(), nil, types.ListConntrackParams{Command: tt.command, FilterParameters: tt.filters})
+			if tt.wantError != "" {
+				if err == nil || !strings.Contains(err.Error(), tt.wantError) || len(commands) != 1 {
+					t.Fatalf("error = %v, commands = %q; want %q before file read", err, commands, tt.wantError)
 				}
 				return
 			}
@@ -273,7 +306,10 @@ func TestGetConntrackFallback(t *testing.T) {
 				t.Fatal(err)
 			}
 			if len(commands) != 2 || !slices.Equal(commands[1], []string{"cat", conntrackSystemFile}) {
-				t.Errorf("commands = %q, want fallback file read without CLI filters", commands)
+				t.Errorf("commands = %q, want unfiltered fallback file read", commands)
+			}
+			if result.Data != "tcp src=192.0.2.1" {
+				t.Errorf("data = %q, want fallback file contents", result.Data)
 			}
 		})
 	}

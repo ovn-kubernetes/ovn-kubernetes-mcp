@@ -33,7 +33,8 @@ func (s *MCPServer) GetIptables(ctx context.Context, req *mcp.CallToolRequest, i
 		return nil, types.Result{}, fmt.Errorf("error while getting list of iptables rules: %w", err)
 	}
 
-	binary, filterArgs, err := parseIptablesFilters(in.FilterParameters)
+	command := strings.TrimSpace(in.Command)
+	binary, filterArgs, err := parseIptablesFilters(in.FilterParameters, command)
 	if err != nil {
 		return nil, types.Result{}, fmt.Errorf("error while getting list of iptables rules: %w", err)
 	}
@@ -42,7 +43,6 @@ func (s *MCPServer) GetIptables(ctx context.Context, req *mcp.CallToolRequest, i
 	}
 
 	table := strings.TrimSpace(in.Table)
-	command := strings.TrimSpace(in.Command)
 	cmd := commandbuilder.NewCommand(binary)
 	// Defaults to 'filter' table when not specified
 	cmd.AddIf(table == "", "-t", "filter")
@@ -50,8 +50,7 @@ func (s *MCPServer) GetIptables(ctx context.Context, req *mcp.CallToolRequest, i
 	// Defaults to -L (list) when command not specified
 	cmd.AddIf(command == "", "-L")
 	cmd.AddIfNotEmpty(command, command)
-	// FilterParameters are invalid with -S/--list-rules command
-	cmd.AddIf(command != "-S" && command != "--list-rules", filterArgs...)
+	cmd.Add(filterArgs...)
 
 	stdout, stderr, err := s.executeCommand(ctx, in.Namespace, in.Node, cmd.Build())
 	if err != nil {
@@ -78,7 +77,7 @@ var iptablesLongFilters = map[string]byte{
 
 // parseIptablesFilters accepts [chain [rulenum]] followed by listing options.
 // It returns the original tokens and selects IPv6 only from an explicit flag.
-func parseIptablesFilters(filters string) (string, []string, error) {
+func parseIptablesFilters(filters, command string) (string, []string, error) {
 	if err := utils.ValidateSafeString(filters, "filter parameters", true, utils.ShellMetaCharactersTypeDefault); err != nil {
 		return "", nil, err
 	}
@@ -119,7 +118,11 @@ func parseIptablesFilters(filters string) (string, []string, error) {
 			flag := options[0]
 			options = options[1:]
 			switch flag {
-			case 'v', 'n', 'x', '4':
+			case 'v', '4':
+			case 'n', 'x':
+				if command == "-S" || command == "--list-rules" {
+					return "", nil, fmt.Errorf("iptables filter option %q is not supported with %s", arg, command)
+				}
 			case '6':
 				binary = "ip6tables"
 			case 'w':

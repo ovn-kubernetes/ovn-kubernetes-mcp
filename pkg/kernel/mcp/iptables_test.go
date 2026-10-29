@@ -189,6 +189,25 @@ func TestGetIptablesRejectsUnsafeFilters(t *testing.T) {
 	}
 }
 
+func TestGetIptablesRejectsIncompatibleFilters(t *testing.T) {
+	for _, command := range []string{"-S", "--list-rules", " --list-rules "} {
+		for _, filters := range []string{"-n", "--numeric", "-x", "--exact", "--line-numbers", "INPUT -nv6"} {
+			t.Run(command+"/"+filters, func(t *testing.T) {
+				s := &MCPServer{runDebugNodeCommand: func(_ context.Context, _, _, _ string, _ []string, _, _ string, _ time.Duration) (string, string, error) {
+					t.Fatal("incompatible filters reached debug pod execution")
+					return "", "", nil
+				}}
+				_, _, err := s.GetIptables(t.Context(), nil, types.ListIPTablesParams{
+					Command: command, FilterParameters: filters,
+				})
+				if err == nil || !strings.Contains(err.Error(), "is not supported with "+strings.TrimSpace(command)) {
+					t.Fatalf("error = %v, want incompatible filter error", err)
+				}
+			})
+		}
+	}
+}
+
 func TestGetIptablesCommand(t *testing.T) {
 	tests := []struct {
 		name    string
@@ -216,7 +235,10 @@ func TestGetIptablesCommand(t *testing.T) {
 		{"repeated verbose", "", "", "-vvn4", []string{"iptables", "-t", "filter", "-L", "-vvn4"}},
 		{"native numeric wait", "", "", "-w0x6", []string{"iptables", "-t", "filter", "-L", "-w0x6"}},
 		{"rule listing", "--list-rules", "raw", "", []string{"iptables", "-t", "raw", "--list-rules"}},
-		{"rule listing omits filters", "-S", "", "-6 -n", []string{"ip6tables", "-t", "filter", "-S"}},
+		{"rule listing chain", "-S", "", "INPUT", []string{"iptables", "-t", "filter", "-S", "INPUT"}},
+		{"long rule listing chain", "--list-rules", "raw", "PREROUTING --wait=1", []string{"iptables", "-t", "raw", "--list-rules", "PREROUTING", "--wait=1"}},
+		{"IPv6 rule listing chain", "-S", "", "INPUT -6", []string{"ip6tables", "-t", "filter", "-S", "INPUT", "-6"}},
+		{"rule listing options", "-S", "", "-6 -v", []string{"ip6tables", "-t", "filter", "-S", "-6", "-v"}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

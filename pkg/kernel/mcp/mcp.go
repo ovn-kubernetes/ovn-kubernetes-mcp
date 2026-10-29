@@ -68,7 +68,7 @@ NAT filters -n/--src-nat, -g/--dst-nat, and -j/--any-nat accept an optional sepa
 Values may be separate (-p tcp), attached to short options (-ptcp), or use --name=value.
 An optional full table name (conntrack, expect, dying, unconfirmed) may precede the options.
 Counter clearing, alternate operations, and unlisted options or abbreviations are rejected.
-Filters apply only to dump/list. Count, stats, and the /proc file fallback do not apply them.
+Filters apply to dump/list with the conntrack CLI. Count and stats reject non-empty filter_parameters. The /proc file fallback ignores filters and returns unfiltered entries.
 - head (optional): Return only first N lines. Default: %d lines if tail is not specified
 - tail (optional): Return only last N lines
 - apply_tail_first (optional): If both head and tail are set and apply_tail_first is true,
@@ -112,7 +112,7 @@ Parameters:
 								-6, --ipv6                       : IPv6
 Short flags may be combined (e.g., -nv4). Wait values may be separate (-w 5), attached (-w5), or use --wait=5.
 Other options and abbreviated long option names are rejected. Source, destination, and protocol selectors are not valid with iptables listing commands.
-Filter options apply to -L/--list. For -S/--list-rules, only the IPv4/IPv6 selection is used.
+Chain selection works with both -L/--list and -S/--list-rules. With -S/--list-rules, -n/--numeric, -x/--exact, and --line-numbers are rejected before creating a debug pod.
 - head (optional): Return only first N lines. Default: %d lines if tail is not specified
 - tail (optional): Return only last N lines
 - apply_tail_first (optional): If both head and tail are set and apply_tail_first is true,

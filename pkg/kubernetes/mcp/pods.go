@@ -46,16 +46,5 @@ func (s *MCPServer) ExecPod(ctx context.Context, req *mcp.CallToolRequest, in ty
 
 // RunPodExecCommand runs a command on a pod container by name and namespace.
 func (s *MCPServer) RunPodExecCommand(ctx context.Context, namespace, name, container string, command []string) (string, string, error) {
-	_, result, err := s.ExecPod(ctx, nil, types.ExecPodParams{
-		NamespacedNameParams: types.NamespacedNameParams{
-			Name:      name,
-			Namespace: namespace,
-		},
-		Container: container,
-		Command:   command,
-	})
-	if err != nil {
-		return "", "", err
-	}
-	return result.Stdout, result.Stderr, nil
+	return s.clientSet.ExecPod(ctx, name, namespace, container, command)
 }

@@ -55,7 +55,7 @@ func (c *OVNKMCPServerClientSet) DebugNode(ctx context.Context, namespace, name,
 	// Execute the command in the pod.
 	stdout, stderr, err := c.ExecPod(ctx, debugPodName, namespace, "debug-container", command)
 	if err != nil {
-		return "", "", fmt.Errorf("failed to execute command in debug pod: %w", err)
+		return stdout, stderr, fmt.Errorf("failed to execute command in debug pod: %w", err)
 	}
 
 	return stdout, stderr, nil

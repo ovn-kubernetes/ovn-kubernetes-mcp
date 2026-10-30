@@ -9,6 +9,7 @@ import (
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"github.com/ovn-kubernetes/ovn-kubernetes-mcp/pkg/network-tools/types"
+	"github.com/ovn-kubernetes/ovn-kubernetes-mcp/pkg/utils"
 	"github.com/ovn-kubernetes/ovn-kubernetes-mcp/pkg/utils/commandbuilder"
 )
 
@@ -44,6 +45,7 @@ func (s *MCPServer) Pwru(ctx context.Context, req *mcp.CallToolRequest, in types
 
 	stdout, stderr, err := s.runDebugNodeCommand(ctx, in.NodePodNamespace, in.NodeName, s.cfg.PwruImage, cmd, "/sys/kernel/debug", "/sys/kernel/debug", 0)
 	if err != nil {
+		err = utils.FormatCommandExecutionError(stdout, stderr, err)
 		return nil, types.CommandResult{}, err
 	}
 	return nil, types.CommandResult{Output: stdout, Stderr: stderr}, nil

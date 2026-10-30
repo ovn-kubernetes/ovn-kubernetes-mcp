@@ -209,7 +209,7 @@ default via 10.0.0.254 dev br-ex proto dhcp src 10.0.0.10 metric 48
 func (s *MCPServer) executeCommand(ctx context.Context, namespace, node string, command []string) (string, string, error) {
 	stdout, stderr, err := s.runDebugNodeCommand(ctx, namespace, node, s.cfg.Image, command, "", "", 0)
 	if err != nil {
-		return "", "", fmt.Errorf("error while establishing tty connection to the node: %w", err)
+		return stdout, stderr, fmt.Errorf("error while executing command on node: %w", err)
 	}
 
 	// Filter out warning lines from stderr

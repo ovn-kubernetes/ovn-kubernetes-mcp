@@ -10,6 +10,7 @@ import (
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"github.com/ovn-kubernetes/ovn-kubernetes-mcp/pkg/network-tools/types"
+	"github.com/ovn-kubernetes/ovn-kubernetes-mcp/pkg/utils"
 	"github.com/ovn-kubernetes/ovn-kubernetes-mcp/pkg/utils/commandbuilder"
 )
 
@@ -71,12 +72,14 @@ func (s *MCPServer) Tcpdump(ctx context.Context, req *mcp.CallToolRequest, in ty
 	case "node":
 		stdout, stderr, err := s.runDebugNodeCommand(ctx, in.Namespace, in.Name, s.cfg.TcpdumpImage, cmd, "", "", 0)
 		if err != nil {
+			err = utils.FormatCommandExecutionError(stdout, stderr, err)
 			return nil, types.CommandResult{}, err
 		}
 		return nil, types.CommandResult{Output: stdout, Stderr: stderr}, nil
 	case "pod":
 		stdout, stderr, err := s.runPodExecCommand(ctx, in.Namespace, in.Name, in.ContainerName, cmd)
 		if err != nil {
+			err = utils.FormatCommandExecutionError(stdout, stderr, err)
 			return nil, types.CommandResult{}, err
 		}
 		return nil, types.CommandResult{Output: stdout, Stderr: stderr}, nil

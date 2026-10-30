@@ -5,6 +5,7 @@ package client
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"net/url"
@@ -17,6 +18,7 @@ import (
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/rest/fake"
 	"k8s.io/client-go/tools/remotecommand"
+	remoteexec "k8s.io/client-go/util/exec"
 )
 
 func TestGetPodLogs(t *testing.T) {
@@ -44,6 +46,8 @@ const (
 type fakeExecutor struct {
 	url     *url.URL
 	execErr error
+	stdout  string
+	stderr  string
 }
 
 func (e *fakeExecutor) Execute(url *url.URL, config *rest.Config, stdin io.Reader, stdout, stderr io.Writer, tty bool, terminalSizeQueue remotecommand.TerminalSizeQueue) error {
@@ -52,6 +56,12 @@ func (e *fakeExecutor) Execute(url *url.URL, config *rest.Config, stdin io.Reade
 
 func (e *fakeExecutor) ExecuteWithContext(ctx context.Context, url *url.URL, config *rest.Config, stdin io.Reader, stdout, stderr io.Writer, tty bool, terminalSizeQueue remotecommand.TerminalSizeQueue) error {
 	e.url = url
+	if _, err := io.WriteString(stdout, e.stdout); err != nil {
+		return err
+	}
+	if _, err := io.WriteString(stderr, e.stderr); err != nil {
+		return err
+	}
 	command := url.Query().Get("command")
 	switch command {
 	case string(successExecCommand):
@@ -63,6 +73,81 @@ func (e *fakeExecutor) ExecuteWithContext(ctx context.Context, url *url.URL, con
 	}
 
 	return e.execErr
+}
+
+func TestExecPodExecutionErrors(t *testing.T) {
+	exitErr := remoteexec.CodeExitError{Err: errors.New("command terminated with exit code 1"), Code: 1}
+	transportErr := errors.New("unable to upgrade connection")
+	tests := []struct {
+		name     string
+		stdout   string
+		stderr   string
+		execErr  error
+		wantExit bool
+	}{
+		{
+			name:     "nonzero exit with multiline stderr",
+			stdout:   "partial output\n",
+			stderr:   "\nWARNING: database connection retried\novs-vsctl: no bridge named zz-absent-br\n",
+			execErr:  exitErr,
+			wantExit: true,
+		},
+		{
+			name:     "nonzero exit with stdout only",
+			stdout:   "partial output\n",
+			execErr:  exitErr,
+			wantExit: true,
+		},
+		{
+			name:     "nonzero exit without stderr",
+			execErr:  exitErr,
+			wantExit: true,
+		},
+		{
+			name:     "nonzero exit with whitespace-only stderr",
+			stderr:   " \n\t",
+			execErr:  exitErr,
+			wantExit: true,
+		},
+		{
+			name:    "transport failure",
+			stdout:  "partial output\n",
+			stderr:  "connection interrupted\n",
+			execErr: transportErr,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			pod := &corev1.Pod{
+				ObjectMeta: metav1.ObjectMeta{Name: "test", Namespace: "default"},
+				Status:     corev1.PodStatus{Phase: corev1.PodRunning},
+			}
+			c := NewFakeClient(pod)
+			c.corev1RestClient = &fake.RESTClient{
+				VersionedAPIPath: "/api/v1",
+				GroupVersion:     schema.GroupVersion{Group: "", Version: "v1"},
+			}
+			c.podExecutor = &fakeExecutor{stdout: tt.stdout, stderr: tt.stderr, execErr: tt.execErr}
+
+			stdout, stderr, err := c.ExecPod(t.Context(), pod.Name, pod.Namespace, "test", []string{"ovs-vsctl", "list-ports", "zz-absent-br"})
+			wantError := "failed to execute command [ovs-vsctl list-ports zz-absent-br] in pod: " + tt.execErr.Error()
+			if err == nil || err.Error() != wantError {
+				t.Fatalf("error = %v, want %q", err, wantError)
+			}
+			if !errors.Is(err, tt.execErr) {
+				t.Errorf("error does not wrap execution error: %v", err)
+			}
+			if tt.wantExit {
+				var exitError remoteexec.ExitError
+				if !errors.As(err, &exitError) || exitError.ExitStatus() != 1 {
+					t.Errorf("error = %v, want exit status 1 accessible through errors.As", err)
+				}
+			}
+			if stdout != tt.stdout || stderr != tt.stderr {
+				t.Errorf("output = (%q, %q), want (%q, %q)", stdout, stderr, tt.stdout, tt.stderr)
+			}
+		})
+	}
 }
 
 func TestExecPod(t *testing.T) {

@@ -8,6 +8,9 @@ import (
 	"strings"
 	"time"
 
+	corev1 "k8s.io/api/core/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -31,6 +34,22 @@ var _ = Describe("OVS Tools", Ordered, func() {
 		var err error
 		namespace, podName, err = utils.FindOVNKubeNodePod(kubeClient)
 		Expect(err).NotTo(HaveOccurred(), "Failed to find ovnkube-node pod")
+	})
+
+	Context("command execution errors", func() {
+		It("should report the native ovs-ofctl error for a nonexistent bridge", func() {
+			utils.ExpectToolError(mcpInspector, ovsOfctlToolName, map[string]any{
+				"namespace": namespace, "name": podName, "action": "dump-flows", "bridge": "zz-absent-br",
+			}, "zz-absent-br is not a bridge or a socket")
+		})
+		It("should report the native ovs-appctl error when the daemon is absent", func(ctx SpecContext) {
+			source := &corev1.Pod{}
+			Expect(kubeClient.Get(ctx, client.ObjectKey{Namespace: namespace, Name: podName}, source)).To(Succeed())
+			errorPod := utils.CreateToolPod(ctx, kubeClient, namespace, source.Spec.Containers[0].Image, nil)
+			utils.ExpectToolError(mcpInspector, ovsAppctlToolName, map[string]any{
+				"namespace": namespace, "name": errorPod, "action": "dpctl/dump-conntrack",
+			}, "cannot read pidfile")
+		})
 	})
 
 	Context("OVS List Bridges", func() {
@@ -62,6 +81,15 @@ var _ = Describe("OVS Tools", Ordered, func() {
 	})
 
 	Context("OVS List Ports", func() {
+		It("should report the command error for a nonexistent bridge", func() {
+			utils.ExpectToolError(mcpInspector, ovsVsctlToolName, map[string]any{
+				"namespace": namespace,
+				"name":      podName,
+				"action":    "list-ports",
+				"bridge":    "zz-absent-br",
+			}, "ovs-vsctl: no bridge named zz-absent-br")
+		})
+
 		It("should list OVS ports for br-int bridge", func() {
 			By("Running ovs-vsctl list-ports for br-int")
 			output, err := mcpInspector.

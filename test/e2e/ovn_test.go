@@ -7,6 +7,9 @@ import (
 	"maps"
 	"strings"
 
+	corev1 "k8s.io/api/core/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
@@ -30,6 +33,29 @@ var _ = Describe("OVN Tools", Ordered, func() {
 		var err error
 		namespace, podName, err = utils.FindOVNKubeNodePod(kubeClient)
 		Expect(err).NotTo(HaveOccurred(), "Failed to find ovnkube-node pod")
+	})
+
+	Context("command execution errors", func() {
+		var errorPod string
+		BeforeAll(func(ctx SpecContext) {
+			source := &corev1.Pod{}
+			Expect(kubeClient.Get(ctx, client.ObjectKey{Namespace: namespace, Name: podName}, source)).To(Succeed())
+			errorPod = utils.CreateToolPod(ctx, kubeClient, namespace, source.Spec.Containers[0].Image, []corev1.EnvVar{
+				{Name: "OVN_NB_DAEMON", Value: "/tmp/absent-nbctl.ctl"},
+				{Name: "OVN_SB_DAEMON", Value: "/tmp/absent-sbctl.ctl"},
+			})
+		})
+		DescribeTable("should report the native command error",
+			func(tool string, args map[string]any, wantError string) {
+				args["namespace"] = namespace
+				args["name"] = errorPod
+				utils.ExpectToolError(mcpInspector, tool, args, wantError)
+			},
+			Entry("ovn-show", ovnShowToolName, map[string]any{"database": "nbdb"}, "could not connect to ovn-nbctl daemon"),
+			Entry("ovn-get", ovnGetToolName, map[string]any{"database": "nbdb", "table": "Logical_Switch"}, "could not connect to ovn-nbctl daemon"),
+			Entry("ovn-lflow-list", ovnLflowListToolName, map[string]any{}, "could not connect to ovn-sbctl daemon"),
+			Entry("ovn-trace", ovnTraceToolName, map[string]any{"datapath": "zz-absent", "microflow": "ip4"}, "database connection failed"),
+		)
 	})
 
 	Context("OVN Show", func() {

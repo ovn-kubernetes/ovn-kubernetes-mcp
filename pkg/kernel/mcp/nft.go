@@ -48,6 +48,8 @@ func (s *MCPServer) GetNFT(ctx context.Context, req *mcp.CallToolRequest, in typ
 
 	stdout, stderr, err := s.executeCommand(ctx, in.Namespace, in.Node, cmd.Build())
 	if err != nil {
+		lines := in.HeadTailParams.Apply(strings.Split(strings.TrimSpace(stdout), "\n"), DefaultMaxOutputLines)
+		err = utils.FormatCommandExecutionError(strings.Join(lines, "\n"), stderr, err)
 		return nil, types.Result{}, fmt.Errorf("error while getting nft data: %w", err)
 	}
 

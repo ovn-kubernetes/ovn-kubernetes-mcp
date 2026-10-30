@@ -47,6 +47,8 @@ func (s *MCPServer) GetConntrack(ctx context.Context, req *mcp.CallToolRequest, 
 		stdout, stderr, err = s.getConntrackUsingCLI(ctx, in.Namespace, in.Node, strings.TrimSpace(in.Command), filters)
 	}
 	if err != nil {
+		lines := in.HeadTailParams.Apply(strings.Split(strings.TrimSpace(stdout), "\n"), DefaultMaxOutputLines)
+		err = utils.FormatCommandExecutionError(strings.Join(lines, "\n"), stderr, err)
 		return nil, types.Result{}, fmt.Errorf("error while getting list of conntrack entries: %w", err)
 	}
 

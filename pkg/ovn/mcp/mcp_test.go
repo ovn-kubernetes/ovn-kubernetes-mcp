@@ -5,12 +5,43 @@ package mcp
 
 import (
 	"context"
+	"errors"
 	"slices"
 	"strings"
 	"testing"
 
 	ovntypes "github.com/ovn-kubernetes/ovn-kubernetes-mcp/pkg/ovn/types"
+	"github.com/ovn-kubernetes/ovn-kubernetes-mcp/pkg/utils/headtail"
 )
+
+func TestShowFailureOutputLimits(t *testing.T) {
+	cause := errors.New("command terminated with exit code 1")
+	stdout := strings.Repeat("first\n", DefaultMaxLines) + "last\n"
+	tests := []struct {
+		name   string
+		limits headtail.HeadTailParams
+		want   string
+	}{
+		{"default limit", headtail.HeadTailParams{}, strings.TrimSpace(strings.Repeat("first\n", DefaultMaxLines))},
+		{"head", headtail.HeadTailParams{Head: 1}, "first"},
+		{"tail", headtail.HeadTailParams{Tail: 1}, "last"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			s := &MCPServer{runPodExecCommand: func(_ context.Context, _, _, _ string, _ []string) (string, string, error) {
+				return stdout, "native explanation\n", cause
+			}}
+			_, _, err := s.Show(t.Context(), nil, ovntypes.ShowParams{Database: "nbdb", HeadTailParams: tt.limits})
+			if !errors.Is(err, cause) {
+				t.Fatalf("error = %v, want original cause %v", err, cause)
+			}
+			want := "\npartial stdout:\n" + tt.want + "\nstderr:\nnative explanation"
+			if !strings.HasSuffix(err.Error(), want) {
+				t.Errorf("error = %v, want limited stdout and stderr suffix %q", err, want)
+			}
+		})
+	}
+}
 
 func TestTraceCommand(t *testing.T) {
 	tests := []struct {

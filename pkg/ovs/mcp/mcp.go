@@ -227,6 +227,9 @@ func (s *MCPServer) Appctl(ctx context.Context, req *mcp.CallToolRequest,
 func (s *MCPServer) listBridges(ctx context.Context, namespace, name string) ([]string, error) {
 	stdout, stderr, err := s.runPodExecCommand(ctx, namespace, name, "", []string{"ovs-vsctl", "list-br"})
 	if err != nil {
+		limits := headtail.HeadTailParams{}
+		lines := limits.Apply(strings.Split(strings.TrimSpace(stdout), "\n"), DefaultMaxLines)
+		err = utils.FormatCommandExecutionError(strings.Join(lines, "\n"), stderr, err)
 		return []string{}, fmt.Errorf("failed to retrieve ovs bridge from pod %s/%s: %w",
 			namespace, name, err)
 	}
@@ -241,6 +244,8 @@ func (s *MCPServer) listBridges(ctx context.Context, namespace, name string) ([]
 func (s *MCPServer) show(ctx context.Context, namespace, name string, headTailParams headtail.HeadTailParams) (string, error) {
 	stdout, stderr, err := s.runPodExecCommand(ctx, namespace, name, "", []string{"ovs-vsctl", "show"})
 	if err != nil {
+		lines := headTailParams.Apply(strings.Split(strings.TrimSpace(stdout), "\n"), DefaultMaxLines)
+		err = utils.FormatCommandExecutionError(strings.Join(lines, "\n"), stderr, err)
 		return "", fmt.Errorf("failed to retrieve ovs configuration from pod %s/%s: %w",
 			namespace, name, err)
 	}
@@ -260,6 +265,9 @@ func (s *MCPServer) listPorts(ctx context.Context, namespace, name, bridge strin
 	}
 	stdout, stderr, err := s.runPodExecCommand(ctx, namespace, name, "", []string{"ovs-vsctl", "list-ports", bridge})
 	if err != nil {
+		limits := headtail.HeadTailParams{}
+		lines := limits.Apply(strings.Split(strings.TrimSpace(stdout), "\n"), DefaultMaxLines)
+		err = utils.FormatCommandExecutionError(strings.Join(lines, "\n"), stderr, err)
 		return []string{}, fmt.Errorf("failed to retrieve ports for bridge %s from pod %s/%s: %w",
 			bridge, namespace, name, err)
 	}
@@ -277,6 +285,9 @@ func (s *MCPServer) listInterfaces(ctx context.Context, namespace, name, bridge 
 	}
 	stdout, stderr, err := s.runPodExecCommand(ctx, namespace, name, "", []string{"ovs-vsctl", "list-ifaces", bridge})
 	if err != nil {
+		limits := headtail.HeadTailParams{}
+		lines := limits.Apply(strings.Split(strings.TrimSpace(stdout), "\n"), DefaultMaxLines)
+		err = utils.FormatCommandExecutionError(strings.Join(lines, "\n"), stderr, err)
 		return []string{}, fmt.Errorf("failed to retrieve interfaces for bridge %s from pod %s/%s: %w",
 			bridge, namespace, name, err)
 	}
@@ -296,6 +307,8 @@ func (s *MCPServer) dumpFlows(ctx context.Context, namespace, name, bridge strin
 	flows, err := patternParams.ExecuteWithMatch(func() ([]string, error) {
 		stdout, stderr, err := s.runPodExecCommand(ctx, namespace, name, "", []string{"ovs-ofctl", "dump-flows", bridge})
 		if err != nil {
+			lines := headTailParams.Apply(strings.Split(strings.TrimSpace(stdout), "\n"), DefaultMaxLines)
+			err = utils.FormatCommandExecutionError(strings.Join(lines, "\n"), stderr, err)
 			return nil, fmt.Errorf("failed to dump flows for bridge %s on pod %s/%s: %w",
 				bridge, namespace, name, err)
 		}
@@ -326,6 +339,8 @@ func (s *MCPServer) dumpConntrack(ctx context.Context, namespace, name string, a
 	entries, err := patternParams.ExecuteWithMatch(func() ([]string, error) {
 		stdout, stderr, err := s.runPodExecCommand(ctx, namespace, name, "", cmd)
 		if err != nil {
+			lines := headTailParams.Apply(strings.Split(strings.TrimSpace(stdout), "\n"), DefaultMaxLines)
+			err = utils.FormatCommandExecutionError(strings.Join(lines, "\n"), stderr, err)
 			return nil, fmt.Errorf("failed to dump conntrack on pod %s/%s: %w",
 				namespace, name, err)
 		}
@@ -354,6 +369,8 @@ func (s *MCPServer) dumpOfprotoTrace(ctx context.Context, namespace, name, bridg
 	lines, err := patternParams.ExecuteWithMatch(func() ([]string, error) {
 		stdout, stderr, err := s.runPodExecCommand(ctx, namespace, name, "", cmd)
 		if err != nil {
+			lines := headTailParams.Apply(strings.Split(strings.TrimSpace(stdout), "\n"), DefaultMaxLines)
+			err = utils.FormatCommandExecutionError(strings.Join(lines, "\n"), stderr, err)
 			return nil, fmt.Errorf("failed to trace flow on bridge %s, pod %s/%s: %w",
 				bridge, namespace, name, err)
 		}

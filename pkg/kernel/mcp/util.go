@@ -9,6 +9,7 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/ovn-kubernetes/ovn-kubernetes-mcp/pkg/utils"
 	"github.com/ovn-kubernetes/ovn-kubernetes-mcp/pkg/utils/commandbuilder"
 )
 
@@ -24,8 +25,9 @@ var ConntrackSummaryPattern = regexp.MustCompile(`^conntrack v\d+\.\d+\.\d+ \(co
 // utilityExists checks if a utility/command exists in the container
 func (s *MCPServer) utilityExists(ctx context.Context, namespace, node, utility string) error {
 	cmd := commandbuilder.NewCommand(utility, "-V")
-	_, stderr, err := s.runDebugNodeCommand(ctx, namespace, node, s.cfg.Image, cmd.Build(), "", "", 0)
+	stdout, stderr, err := s.runDebugNodeCommand(ctx, namespace, node, s.cfg.Image, cmd.Build(), "", "", 0)
 	if err != nil {
+		err = utils.FormatCommandExecutionError(stdout, stderr, err)
 		return fmt.Errorf("error while checking availability of the utility %s: %w", utility, err)
 	}
 	stderr = strings.TrimSpace(filterWarnings(stderr))

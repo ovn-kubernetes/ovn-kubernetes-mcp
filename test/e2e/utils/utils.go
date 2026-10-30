@@ -34,7 +34,7 @@ func UnmarshalCallToolResult[T any](output []byte) T {
 	return resultInTFormat
 }
 
-func ExpectToolError(mcpInspector *inspector.MCPInspector, toolName string, toolArgs map[string]any, wantError string) {
+func ExpectToolError(mcpInspector *inspector.MCPInspector, toolName string, toolArgs map[string]any, wantError string) string {
 	output, err := mcpInspector.
 		MethodCall(toolName, toolArgs).
 		Execute()
@@ -58,7 +58,9 @@ func ExpectToolError(mcpInspector *inspector.MCPInspector, toolName string, tool
 	}
 
 	gomega.Expect(messages).NotTo(gomega.BeEmpty(), "expected error text content in CallToolResult")
-	gomega.Expect(strings.Join(messages, "\n")).To(gomega.ContainSubstring(wantError))
+	message := strings.Join(messages, "\n")
+	gomega.Expect(message).To(gomega.ContainSubstring(wantError))
+	return message
 }
 
 // RestrictedSecurityContext returns a SecurityContext that complies with the

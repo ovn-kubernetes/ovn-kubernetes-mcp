@@ -76,7 +76,7 @@ func (c *OVNKMCPServerClientSet) ExecPod(ctx context.Context, name, namespace, c
 
 	err = c.podExecutor.ExecuteWithContext(ctx, req.URL(), c.config, nil, stdout, stderr, false, nil)
 	if err != nil {
-		return "", "", fmt.Errorf("failed to execute command %v in pod: %w", command, err)
+		return stdout.String(), stderr.String(), fmt.Errorf("failed to execute command %v in pod: %w", command, err)
 	}
 
 	return stdout.String(), stderr.String(), nil

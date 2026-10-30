@@ -47,6 +47,8 @@ func (s *MCPServer) GetIPCommandOutput(ctx context.Context, req *mcp.CallToolReq
 
 	stdout, stderr, err := s.executeCommand(ctx, in.Namespace, in.Node, cmd.Build())
 	if err != nil {
+		lines := in.HeadTailParams.Apply(strings.Split(strings.TrimSpace(stdout), "\n"), DefaultMaxOutputLines)
+		err = utils.FormatCommandExecutionError(strings.Join(lines, "\n"), stderr, err)
 		return nil, types.Result{}, fmt.Errorf("error while getting ip data: %w", err)
 	}
 

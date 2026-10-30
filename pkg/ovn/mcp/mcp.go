@@ -196,6 +196,8 @@ func (s *MCPServer) Show(ctx context.Context, req *mcp.CallToolRequest,
 	cmd := getDBCommand(in.Database)
 	stdout, stderr, err := s.runPodExecCommand(ctx, in.Namespace, in.Name, "", []string{cmd, "show"})
 	if err != nil {
+		lines := in.HeadTailParams.Apply(strings.Split(strings.TrimSpace(stdout), "\n"), DefaultMaxLines)
+		err = utils.FormatCommandExecutionError(strings.Join(lines, "\n"), stderr, err)
 		return nil, result, fmt.Errorf("failed to retrieve OVN configuration from pod %s/%s: %w",
 			in.Namespace, in.Name, err)
 	}
@@ -260,6 +262,8 @@ func (s *MCPServer) Get(ctx context.Context, req *mcp.CallToolRequest,
 	lines, err := in.PatternParams.ExecuteWithMatch(func() ([]string, error) {
 		stdout, stderr, err := s.runPodExecCommand(ctx, in.Namespace, in.Name, "", cmdArgs)
 		if err != nil {
+			lines := in.HeadTailParams.Apply(strings.Split(strings.TrimSpace(stdout), "\n"), DefaultMaxLines)
+			err = utils.FormatCommandExecutionError(strings.Join(lines, "\n"), stderr, err)
 			if in.Record != "" {
 				return nil, fmt.Errorf("failed to get record %s from table %s on pod %s/%s: %w",
 					in.Record, in.Table, in.Namespace, in.Name, err)
@@ -314,6 +318,8 @@ func (s *MCPServer) ListLogicalFlows(ctx context.Context, req *mcp.CallToolReque
 	lines, err := in.PatternParams.ExecuteWithMatch(func() ([]string, error) {
 		stdout, stderr, err := s.runPodExecCommand(ctx, in.Namespace, in.Name, "", cmdArgs)
 		if err != nil {
+			lines := in.HeadTailParams.Apply(strings.Split(strings.TrimSpace(stdout), "\n"), DefaultMaxLines)
+			err = utils.FormatCommandExecutionError(strings.Join(lines, "\n"), stderr, err)
 			return nil, fmt.Errorf("failed to list logical flows from pod %s/%s: %w",
 				in.Namespace, in.Name, err)
 		}
@@ -370,6 +376,8 @@ func (s *MCPServer) Trace(ctx context.Context, req *mcp.CallToolRequest,
 	lines, err := in.PatternParams.ExecuteWithMatch(func() ([]string, error) {
 		stdout, stderr, err := s.runPodExecCommand(ctx, in.Namespace, in.Name, "", cmdArgs)
 		if err != nil {
+			lines := in.HeadTailParams.Apply(strings.Split(strings.TrimSpace(stdout), "\n"), DefaultMaxLines)
+			err = utils.FormatCommandExecutionError(strings.Join(lines, "\n"), stderr, err)
 			return nil, fmt.Errorf("failed to trace packet on pod %s/%s: %w",
 				in.Namespace, in.Name, err)
 		}

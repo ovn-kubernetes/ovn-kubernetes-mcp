@@ -4,15 +4,23 @@
 package e2e
 
 import (
+	"context"
 	"maps"
+	"net/http"
+	"net/http/httptest"
+	"os"
 	"strings"
+	"time"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
 	"github.com/google/uuid"
+	"github.com/modelcontextprotocol/go-sdk/mcp"
 	mcpKernel "github.com/ovn-kubernetes/ovn-kubernetes-mcp/pkg/kernel/mcp"
 	"github.com/ovn-kubernetes/ovn-kubernetes-mcp/pkg/kernel/types"
+	kubernetes "github.com/ovn-kubernetes/ovn-kubernetes-mcp/pkg/kubernetes/mcp"
+	"github.com/ovn-kubernetes/ovn-kubernetes-mcp/test/e2e/inspector"
 	"github.com/ovn-kubernetes/ovn-kubernetes-mcp/test/e2e/utils"
 )
 
@@ -39,7 +47,41 @@ var _ = Describe("Kernel Tools", Ordered, func() {
 		return toolArgs
 	}
 
+	Context("command execution errors", func() {
+		DescribeTable("should report the native command error",
+			func(tool string, args map[string]any, wantError string) {
+				utils.ExpectToolError(mcpInspector, tool, withNode(args), wantError)
+			},
+			Entry("get-iptables", getIPTablesToolName, map[string]any{"command": "-L", "filter_parameters": "zz-absent-chain"}, "No chain/target/match by that name"),
+			Entry("get-conntrack", getConntrackToolName, map[string]any{"command": "-L", "filter_parameters": "-p zz-absent"}, "unsupported protocol"),
+		)
+		It("should report the native nft error without NET_ADMIN", func(ctx SpecContext) {
+			// Use the real Kubernetes executor. Dropping NET_ADMIN leaves -V
+			// working but makes the actual nft ruleset query fail predictably.
+			kubernetesServer, err := kubernetes.NewMCPServer(kubernetes.Config{Kubeconfig: os.Getenv(kubeconfigEnvVar)})
+			Expect(err).NotTo(HaveOccurred())
+			runWithoutNetAdmin := func(ctx context.Context, namespace, node, image string, command []string, hostPath, mountPath string, timeout time.Duration) (string, string, error) {
+				command = append([]string{"setpriv", "--bounding-set=-net_admin", "--"}, command...)
+				return kubernetesServer.RunDebugNode(ctx, namespace, node, image, command, hostPath, mountPath, timeout)
+			}
+			kernelServer, err := mcpKernel.NewMCPServer(runWithoutNetAdmin, mcpKernel.Config{Image: "nicolaka/netshoot:v0.15"})
+			Expect(err).NotTo(HaveOccurred())
+			server := mcp.NewServer(&mcp.Implementation{Name: "nft-permission-test", Version: "test"}, nil)
+			kernelServer.AddTools(server)
+			httpServer := httptest.NewServer(mcp.NewStreamableHTTPHandler(func(*http.Request) *mcp.Server { return server }, nil))
+			DeferCleanup(httpServer.Close)
+			utils.ExpectToolError(inspector.NewMCPInspector().URL(httpServer.URL), getNFTToolName,
+				withNode(map[string]any{"command": "list ruleset"}), "cache initialization failed: Operation not permitted")
+		})
+	})
+
 	Context("get-ip", func() {
+		It("should report the command error for a nonexistent interface", func() {
+			utils.ExpectToolError(mcpInspector, getIPToolName, withNode(map[string]any{
+				"command": "link show dev zz-absent0",
+			}), `Device "zz-absent0" does not exist.`)
+		})
+
 		DescribeTable("should preserve diagnostic global options",
 			func(options string, expected string) {
 				output, err := mcpInspector.MethodCall(getIPToolName, withNode(map[string]any{

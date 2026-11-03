@@ -33,6 +33,12 @@ func (s *MCPServer) GetConntrack(ctx context.Context, req *mcp.CallToolRequest, 
 	if err != nil {
 		return nil, types.Result{}, fmt.Errorf("error while getting list of conntrack entries: %w", err)
 	}
+	if len(filters) > 0 {
+		switch strings.TrimSpace(in.Command) {
+		case "-C", "--count", "-S", "--stats":
+			return nil, types.Result{}, fmt.Errorf("error while getting list of conntrack entries: filter_parameters is only supported with -L/--dump")
+		}
+	}
 	// Falls back to /proc/net/nf_conntrack parsing when conntrack CLI unavailable.
 	err = s.utilityExists(ctx, in.Namespace, in.Node, "conntrack")
 	conntrackCliAvailable := err == nil // true if conntrack CLI is available, false otherwise
@@ -153,7 +159,7 @@ func validateConntrackCommand(command string, cliAvailable bool) error {
 		return nil
 	}
 	if !cliAvailable && (strings.TrimSpace(command) != "-L" && strings.TrimSpace(command) != "--dump") {
-		return fmt.Errorf("configured image does not have conntrack utility, only -L/--dump is supported with limited filters")
+		return fmt.Errorf("configured image does not have conntrack utility, only -L/--dump is supported")
 	}
 	if _, err := strconv.Atoi(command); err == nil {
 		return fmt.Errorf("invalid command: %s", command)

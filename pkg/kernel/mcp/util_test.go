@@ -4,8 +4,28 @@
 package mcp
 
 import (
+	"context"
+	"errors"
+	"strings"
 	"testing"
+	"time"
 )
+
+func TestUtilityExistsPreservesFailureDiagnostics(t *testing.T) {
+	cause := errors.New("command terminated with exit code 1")
+	s := &MCPServer{runDebugNodeCommand: func(_ context.Context, _, _, _ string, _ []string, _, _ string, _ time.Duration) (string, string, error) {
+		return "partial version output\n", "utility explanation\n", cause
+	}}
+	err := s.utilityExists(t.Context(), "default", "node", "nft")
+	if !errors.Is(err, cause) {
+		t.Fatalf("error = %v, want original cause %v", err, cause)
+	}
+	for _, message := range []string{"partial version output", "utility explanation"} {
+		if !strings.Contains(err.Error(), message) {
+			t.Errorf("error = %v, want diagnostic %q", err, message)
+		}
+	}
+}
 
 func TestFilterWarnings(t *testing.T) {
 	tests := []struct {

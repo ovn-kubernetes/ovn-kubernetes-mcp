@@ -144,6 +144,25 @@ var _ = Describe("Network Tools", Ordered, func() {
 		}, 60*time.Second, 2*time.Second).Should(BeTrue())
 	}
 
+	Context("command execution errors", func() {
+		It("should report the native tcpdump error for a nonexistent interface", func() {
+			utils.ExpectToolError(mcpInspector, tcpdumpToolName, map[string]any{
+				"target_type": "node", "name": nodeName, "interface": "zz-absent0", "packet_count": 1,
+			}, "No such device exists")
+		})
+		It("should report the native pwru command error", func() {
+			message := utils.ExpectToolError(mcpInspector, pwruToolName, map[string]any{
+				"node_name": nodeName, "bpf_filter": "tcp and", "output_limit_lines": 1,
+			}, "stderr:")
+			// Some KIND kernels lack ftrace support, so pwru can fail before
+			// reaching BPF compilation. Both explanations must reach the caller.
+			Expect(message).To(Or(
+				ContainSubstring("Cannot find a matching kernel function"),
+				ContainSubstring("syntax error"),
+			))
+		})
+	})
+
 	Context("tcpdump", func() {
 		var serverIP string
 
